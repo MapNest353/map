@@ -214,31 +214,128 @@ MapApp.getDataCacheKey = function(
 };
 
 
+/* =========================================================
+   PERSISTENT MAP DATA CACHE
+   ========================================================= */
+
+MapApp.dataCache = {};
+MapApp.dataPromises = {};
+MapApp.cacheDBPromise = null;
+
+MapApp.openCacheDB = function() {
+
+    if (MapApp.cacheDBPromise) {
+        return MapApp.cacheDBPromise;
+    }
+
+    MapApp.cacheDBPromise = new Promise(function(resolve) {
+
+        if (!window.indexedDB) {
+            resolve(null);
+            return;
+        }
+
+        const request =
+            indexedDB.open("MapNestDataCache", 1);
+
+        request.onupgradeneeded = function(event) {
+
+            const db = event.target.result;
+
+            if (!db.objectStoreNames.contains("mapData")) {
+                db.createObjectStore("mapData");
+            }
+        };
+
+        request.onsuccess = function() {
+            resolve(request.result);
+        };
+
+        request.onerror = function() {
+            console.warn("IndexedDB unavailable.");
+            resolve(null);
+        };
+    });
+
+    return MapApp.cacheDBPromise;
+};
+
+
+MapApp.getCachedData = async function(key) {
+
+    const db = await MapApp.openCacheDB();
+
+    if (!db) return null;
+
+    return new Promise(function(resolve) {
+
+        try {
+
+            const tx =
+                db.transaction("mapData", "readonly");
+
+            const request =
+                tx.objectStore("mapData").get(key);
+
+            request.onsuccess = function() {
+                resolve(request.result || null);
+            };
+
+            request.onerror = function() {
+                resolve(null);
+            };
+
+        } catch (error) {
+            resolve(null);
+        }
+    });
+};
+
+
+MapApp.saveCachedData = async function(key, data) {
+
+    const db = await MapApp.openCacheDB();
+
+    if (!db) return;
+
+    return new Promise(function(resolve) {
+
+        try {
+
+            const tx =
+                db.transaction("mapData", "readwrite");
+
+            tx.objectStore("mapData").put(
+                data,
+                key
+            );
+
+            tx.oncomplete = function() {
+                resolve();
+            };
+
+            tx.onerror = function() {
+                resolve();
+            };
+
+        } catch (error) {
+            resolve();
+        }
+    });
+};
+
+
 MapApp.loadAll = async function(type) {
 
-    /*
-     * Already loaded in this page.
-     */
+    /* Already loaded during this session */
     if (MapApp.dataCache[type]) {
-
-        console.log(
-            "✓ " + type +
-            " loaded from memory"
-        );
-
         return MapApp.dataCache[type];
     }
 
-
-    /*
-     * If another request is already downloading
-     * this same level, wait for that request instead
-     * of starting another download.
-     */
+    /* Another request is already loading it */
     if (MapApp.dataPromises[type]) {
         return MapApp.dataPromises[type];
     }
-
 
     MapApp.dataPromises[type] =
         (async function() {
@@ -264,47 +361,49 @@ MapApp.loadAll = async function(type) {
                 );
             }
 
-
-            const cacheKey =
-                MapApp.getDataCacheKey(
-                    type,
-                    files
-                );
-
-
             /*
-             * Try IndexedDB first.
+             * Cache key is based on the exact list of
+             * files in the manifest.
              *
-             * This is what makes data survive
-             * a page reload.
+             * If you add a new country later,
+             * the key changes automatically and
+             * fresh data is downloaded.
              */
-            const stored =
-                await MapApp.cacheGet(
+            const cacheKey =
+                "v2|" +
+                type +
+                "|" +
+                files
+                    .map(function(x) {
+                        return x.toLowerCase();
+                    })
+                    .sort()
+                    .join(",");
+
+            /* Try persistent browser storage first */
+            const cached =
+                await MapApp.getCachedData(
                     cacheKey
                 );
 
             if (
-                stored &&
-                stored.type === "FeatureCollection" &&
-                Array.isArray(stored.features)
+                cached &&
+                cached.type === "FeatureCollection" &&
+                Array.isArray(cached.features)
             ) {
 
                 MapApp.dataCache[type] =
-                    stored;
+                    cached;
 
                 console.log(
-                    "✓ " + type +
-                    " loaded from IndexedDB"
+                    "✓ " +
+                    type +
+                    " loaded from local cache"
                 );
 
-                return stored;
+                return cached;
             }
 
-
-            /*
-             * No persistent cache.
-             * Download the actual files.
-             */
             console.log(
                 "↓ Downloading " +
                 type +
@@ -313,103 +412,152 @@ MapApp.loadAll = async function(type) {
 
             const datasets =
                 await Promise.all(
-                    files.map(
-                        async function(name) {
+                    files.map(async function(name) {
 
-                            const url =
-                                "data/" +
-                                folder +
-                                "/" +
-                                name.toLowerCase() +
-                                ".json";
+                        const url =
+                            "data/" +
+                            folder +
+                            "/" +
+                            name.toLowerCase() +
+                            ".json";
 
-                            const response =
-                                await fetch(
-                                    url,
-                                    {
-                                        cache: "default"
-                                    }
-                                );
+                        const response =
+                            await fetch(
+                                url,
+                                {
+                                    cache: "default"
+                                }
+                            );
 
-                            if (!response.ok) {
-
-                                throw new Error(
-                                    "Could not load " +
-                                    url
-                                );
-                            }
-
-                            return await response.json();
+                        if (!response.ok) {
+                            throw new Error(
+                                "Could not load " +
+                                url
+                            );
                         }
-                    )
-                );
 
+                        return await response.json();
+                    })
+                );
 
             const features = [];
 
-            for (
-                const data of datasets
-            ) {
+            for (const data of datasets) {
 
                 if (
                     data &&
-                    data.type ===
-                        "FeatureCollection" &&
-                    Array.isArray(
-                        data.features
-                    )
+                    data.type === "FeatureCollection" &&
+                    Array.isArray(data.features)
                 ) {
-
                     features.push(
                         ...data.features
                     );
                 }
             }
 
-
             const result = {
                 type: "FeatureCollection",
                 features: features
             };
 
-
-            /*
-             * Memory cache.
-             */
+            /* Keep in memory */
             MapApp.dataCache[type] =
                 result;
 
-
-            /*
-             * Persistent cache.
-             */
-            await MapApp.cachePut(
+            /* Save for future page loads */
+            await MapApp.saveCachedData(
                 cacheKey,
                 result
             );
 
-
             console.log(
                 "✓ " +
                 type +
-                " cached (" +
-                features.length +
-                " features)"
+                " downloaded and cached"
             );
 
             return result;
 
         })();
 
+    try {
+        return await MapApp.dataPromises[type];
+    } finally {
+        delete MapApp.dataPromises[type];
+    }
+};
+
+
+/* =========================================================
+   BACKGROUND PRELOADING
+   ========================================================= */
+
+MapApp.preloadMapData = async function() {
+
+    /*
+     * Country is already loaded before this starts.
+     */
+
+    await new Promise(function(resolve) {
+        setTimeout(resolve, 100);
+    });
 
     try {
 
-        return await MapApp.dataPromises[type];
+        console.log(
+            "↓ Background loading States..."
+        );
 
-    } finally {
+        await MapApp.loadAll("state");
 
-        delete MapApp.dataPromises[type];
+        console.log(
+            "✓ States ready"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "State preload failed:",
+            error
+        );
     }
+
+    /*
+     * Give the browser a chance to paint before
+     * beginning the larger district dataset.
+     */
+
+    await new Promise(function(resolve) {
+
+        requestAnimationFrame(function() {
+            resolve();
+        });
+
+    });
+
+    try {
+
+        console.log(
+            "↓ Background loading Districts..."
+        );
+
+        await MapApp.loadAll("district");
+
+        console.log(
+            "✓ Districts ready"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "District preload failed:",
+            error
+        );
+    }
+
+    console.log(
+        "✓ All map data cached"
+    );
 };
 
 
@@ -884,6 +1032,9 @@ MapApp.searchCache = null;
 MapApp.searchCache = null;
 MapApp.searchPromise = null;
 
+MapApp.searchCache = null;
+MapApp.searchPromise = null;
+
 MapApp.buildSearchIndex = async function() {
 
     if (MapApp.searchCache) {
@@ -897,29 +1048,15 @@ MapApp.buildSearchIndex = async function() {
     MapApp.searchPromise =
         (async function() {
 
-            const levels = [
-                "country",
-                "state",
-                "district"
-            ];
-
             const index = [];
 
-            /*
-             * IMPORTANT:
-             *
-             * Use loadAll() here instead of fetching files
-             * independently.
-             *
-             * Therefore search shares the exact same
-             * memory/IndexedDB/network cache as the map.
-             */
-            for (const level of levels) {
+            for (
+                const level of
+                ["country", "state", "district"]
+            ) {
 
                 const data =
-                    await MapApp.loadAll(
-                        level
-                    );
+                    await MapApp.loadAll(level);
 
                 for (
                     const feature of
@@ -955,11 +1092,8 @@ MapApp.buildSearchIndex = async function() {
         })();
 
     try {
-
         return await MapApp.searchPromise;
-
     } finally {
-
         MapApp.searchPromise = null;
     }
 };
