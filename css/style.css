@@ -272,3 +272,23 @@ html, body {
     background: #f2f2f2;
 }
 
+
+
+/* Minimal map instructions */
+#info {
+    position: absolute !important;
+    left: 10px !important;
+    bottom: 10px !important;
+    padding: 3px 7px !important;
+    background: rgba(255,255,255,0.65) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+    font-size: 10px !important;
+    color: #777 !important;
+    z-index: 1000 !important;
+    pointer-events: none !important;
+}
+
+#infoName {
+    display: none !important;
+}
