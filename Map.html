@@ -108,6 +108,18 @@ body {
     font-weight: bold;
     margin-bottom: 4px;
 }
+#map-version {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(255,255,255,.92);
+    padding: 5px 9px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: #555;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
 </style>
     <link rel="stylesheet" href="css/style.css?v=2026081901">
 </head>
@@ -115,6 +127,7 @@ body {
 <body>
 
 <div id="map"></div>
+<div id="map-version"></div>
 
 <div id="searchContainer">
 
@@ -167,5 +180,6 @@ body {
 
 <!-- save-export.js disabled: functionality is built into controls.js -->
 
+<script src="js/version.js"></script>
 </body>
 </html>
