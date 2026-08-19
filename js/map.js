@@ -769,7 +769,36 @@ MapApp.bindHoverName = function (feature, layer, level) {
     });
 };
 
+MapApp.showLoading = function () {
+    let loader = document.getElementById("map-loading");
+
+    if (!loader) {
+        loader = document.createElement("div");
+        loader.id = "map-loading";
+        loader.innerHTML = '<div id="map-loading-spinner"></div>';
+        document.body.appendChild(loader);
+    }
+
+    loader.style.display = "flex";
+};
+
+MapApp.hideLoading = function () {
+    const loader = document.getElementById("map-loading");
+
+    if (loader) {
+        loader.style.display = "none";
+    }
+};
+
 MapApp.showCountry = async function () {
+
+    MapApp.showLoading();
+
+    await new Promise(function(resolve) {
+        requestAnimationFrame(function() {
+            requestAnimationFrame(resolve);
+        });
+    });
 
     const savedView = MapApp.saveView();
 
@@ -800,13 +829,23 @@ MapApp.showCountry = async function () {
         );
 
         MapApp.restoreView(savedView);
+        MapApp.hideLoading();
 
     } catch (error) {
+        MapApp.hideLoading();
         console.error("COUNTRY LOAD ERROR:", error);
     }
 };
 
 MapApp.showStates = async function () {
+
+    MapApp.showLoading();
+
+    await new Promise(function(resolve) {
+        requestAnimationFrame(function() {
+            requestAnimationFrame(resolve);
+        });
+    });
 
     const savedView = MapApp.saveView();
 
@@ -837,13 +876,23 @@ MapApp.showStates = async function () {
         );
 
         MapApp.restoreView(savedView);
+        MapApp.hideLoading();
 
     } catch (error) {
+        MapApp.hideLoading();
         console.error("STATE LOAD ERROR:", error);
     }
 };
 
 MapApp.showDistricts = async function () {
+
+    MapApp.showLoading();
+
+    await new Promise(function(resolve) {
+        requestAnimationFrame(function() {
+            requestAnimationFrame(resolve);
+        });
+    });
 
     const savedView = MapApp.saveView();
 
@@ -874,8 +923,10 @@ MapApp.showDistricts = async function () {
         );
 
         MapApp.restoreView(savedView);
+        MapApp.hideLoading();
 
     } catch (error) {
+        MapApp.hideLoading();
         console.error("DISTRICT LOAD ERROR:", error);
     }
 };
@@ -970,6 +1021,8 @@ MapApp.backgroundPreload = async function() {
 
 
 async function startMap() {
+
+    MapApp.showLoading();
 
     try {
 
