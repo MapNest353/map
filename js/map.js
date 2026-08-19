@@ -37,20 +37,18 @@ MapApp.restoreView = function (view) {
 };
 
 MapApp.removeLayers = function () {
-    if (MapApp.countryLayer) {
-        MapApp.map.removeLayer(MapApp.countryLayer);
-        MapApp.countryLayer = null;
-    }
 
-    if (MapApp.stateLayer) {
-        MapApp.map.removeLayer(MapApp.stateLayer);
-        MapApp.stateLayer = null;
-    }
+    const layers = [
+        MapApp.countryLayer,
+        MapApp.stateLayer,
+        MapApp.districtLayer
+    ];
 
-    if (MapApp.districtLayer) {
-        MapApp.map.removeLayer(MapApp.districtLayer);
-        MapApp.districtLayer = null;
-    }
+    layers.forEach(function(layer) {
+        if (layer && MapApp.map.hasLayer(layer)) {
+            MapApp.map.removeLayer(layer);
+        }
+    });
 };
 
 /*
@@ -84,6 +82,7 @@ MapApp.clearOldDataCache = function() {
 MapApp.clearOldDataCache();
 
 MapApp.dataCache = {};
+MapApp.layerCache = {};
 MapApp.dataPromises = {};
 MapApp.cacheDB = null;
 
@@ -228,8 +227,6 @@ MapApp.getDataCacheKey = function(
    PERSISTENT MAP DATA CACHE
    ========================================================= */
 
-MapApp.dataCache = {};
-MapApp.dataPromises = {};
 MapApp.cacheDBPromise = null;
 
 MapApp.openCacheDB = function() {
@@ -359,7 +356,7 @@ MapApp.loadAll = async function(type) {
             throw new Error("Unknown map type: " + type);
         }
 
-        const cacheKey = "global-v2|" + type;
+        const cacheKey = "global-v3|" + type;
 
         const cached =
             await MapApp.getCachedData(cacheKey);
@@ -376,7 +373,7 @@ MapApp.loadAll = async function(type) {
         console.log("↓ Loading global " + type + " data...");
 
         const response = await fetch(
-            "data/global/" + file + ".json?v=2",
+            "data/global/" + file + ".json?v=3",
             { cache: "default" }
         );
 
@@ -718,7 +715,41 @@ MapApp.updateLevelSelection = function(level) {
     });
 };
 
+MapApp.preloadGlobalLevels = async function () {
+    try {
+        // Countries is already being displayed.
+        // Load States quietly in the background.
+        console.log("↻ Background preloading States...");
+
+        await MapApp.loadAll("state");
+
+        console.log("✓ States preloaded");
+
+        // Once States is ready, preload Districts.
+        console.log("↻ Background preloading Districts...");
+
+        await MapApp.loadAll("district");
+
+        console.log("✓ Districts preloaded");
+
+    } catch (error) {
+        console.warn(
+            "Background level preload failed:",
+            error
+        );
+    }
+};
+
 MapApp.showCountry = async function () {
+
+    // FAST PATH: reuse an already-rendered Leaflet layer.
+    if (MapApp.layerCache.country) {
+        MapApp.removeLayers();
+        MapApp.countryLayer = MapApp.layerCache.country;
+        MapApp.countryLayer.addTo(MapApp.map);
+        MapApp.updateLevelSelection("country");
+        return;
+    }
 
     MapApp.updateLevelSelection("country");
 
@@ -736,7 +767,7 @@ MapApp.showCountry = async function () {
 
     try {
 
-        const data = await MapApp.loadAll("country");
+                const data = await MapApp.loadAll("country");
 
         MapApp.countryLayer = L.geoJSON(data, {
 
@@ -758,8 +789,14 @@ MapApp.showCountry = async function () {
             "country"
         );
 
+        MapApp.layerCache.country =
+            MapApp.countryLayer;
+
         MapApp.restoreView(savedView);
         MapApp.hideLoading();
+
+        // Begin background preload immediately.
+        MapApp.preloadGlobalLevels();
 
     } catch (error) {
         MapApp.hideLoading();
@@ -768,6 +805,15 @@ MapApp.showCountry = async function () {
 };
 
 MapApp.showStates = async function () {
+
+    // FAST PATH: reuse an already-rendered Leaflet layer.
+    if (MapApp.layerCache.state) {
+        MapApp.removeLayers();
+        MapApp.stateLayer = MapApp.layerCache.state;
+        MapApp.stateLayer.addTo(MapApp.map);
+        MapApp.updateLevelSelection("state");
+        return;
+    }
 
     MapApp.updateLevelSelection("state");
 
@@ -785,7 +831,7 @@ MapApp.showStates = async function () {
 
     try {
 
-        const data = await MapApp.loadAll("state");
+                const data = await MapApp.loadAll("state");
 
         MapApp.stateLayer = L.geoJSON(data, {
 
@@ -807,6 +853,9 @@ MapApp.showStates = async function () {
             "state"
         );
 
+        MapApp.layerCache.state =
+            MapApp.stateLayer;
+
         MapApp.restoreView(savedView);
         MapApp.hideLoading();
 
@@ -817,6 +866,15 @@ MapApp.showStates = async function () {
 };
 
 MapApp.showDistricts = async function () {
+
+    // FAST PATH: reuse an already-rendered Leaflet layer.
+    if (MapApp.layerCache.district) {
+        MapApp.removeLayers();
+        MapApp.districtLayer = MapApp.layerCache.district;
+        MapApp.districtLayer.addTo(MapApp.map);
+        MapApp.updateLevelSelection("district");
+        return;
+    }
 
     MapApp.updateLevelSelection("district");
 
@@ -834,7 +892,7 @@ MapApp.showDistricts = async function () {
 
     try {
 
-        const data = await MapApp.loadAll("district");
+                const data = await MapApp.loadAll("district");
 
         MapApp.districtLayer = L.geoJSON(data, {
 
@@ -855,6 +913,9 @@ MapApp.showDistricts = async function () {
             MapApp.districtLayer,
             "district"
         );
+
+        MapApp.layerCache.district =
+            MapApp.districtLayer;
 
         MapApp.restoreView(savedView);
         MapApp.hideLoading();
