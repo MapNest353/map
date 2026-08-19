@@ -370,7 +370,7 @@ MapApp.loadAll = async function(type) {
              * fresh data is downloaded.
              */
             const cacheKey =
-                "v2|" +
+                "v3|" +
                 type +
                 "|" +
                 files

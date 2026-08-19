@@ -1,27 +1,9 @@
-(function () {
+document.addEventListener("DOMContentLoaded", function () {
+    const box = document.getElementById("map-version");
+    if (!box) return;
 
-    function showVersion() {
+    const version = window.MAPNEST_VERSION || "v1.0.0";
+    const updated = window.MAPNEST_UPDATED || "";
 
-        const el =
-            document.getElementById("map-version");
-
-        if (!el) return;
-
-        el.textContent =
-            "MapNest " +
-            (window.MAPNEST_VERSION || "") +
-            " · " +
-            (window.MAPNEST_UPDATED || "");
-
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener(
-            "DOMContentLoaded",
-            showVersion
-        );
-    } else {
-        showVersion();
-    }
-
-})();
+    box.textContent = "MapNest " + version + " • Updated " + updated;
+});

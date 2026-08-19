@@ -181,25 +181,7 @@ body {
 
 <!-- save-export.js disabled: functionality is built into controls.js -->
 <script src="js/version.js?v=999999"></script>
-<script>
-(function () {
-    function updateMapVersion() {
-        var box = document.getElementById("map-version");
 
-        if (!box) return;
 
-        box.textContent =
-            "MapNest " +
-            (window.MAPNEST_VERSION || "v1.0.0") +
-            " · Updated " +
-            (window.MAPNEST_UPDATED || "unknown");
-    }
-
-    updateMapVersion();
-
-    window.addEventListener("load", updateMapVersion);
-})();
-</script>
-
-</body>
+<script src="js/version-display.js"></script>\n</body>
 </html>

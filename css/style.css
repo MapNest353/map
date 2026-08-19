@@ -351,3 +351,41 @@ html, body {
 
     pointer-events: none !important;
 }
+
+
+
+/* Clean MapNest version display */
+#map-version {
+    position: fixed !important;
+    left: 10px !important;
+    bottom: 32px !important;
+    z-index: 1001 !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: rgba(80,80,80,.55) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font: 9px/12px Arial,sans-serif !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
+
+/* MapNest version */
+#map-version {
+    position: absolute !important;
+    left: 10px !important;
+    bottom: 32px !important;
+    z-index: 1000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    color: rgba(80,80,80,.55) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    font: 9px/12px Arial,sans-serif !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+}
