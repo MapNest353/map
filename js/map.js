@@ -337,158 +337,67 @@ MapApp.saveCachedData = async function(key, data) {
 
 MapApp.loadAll = async function(type) {
 
-    /* Already loaded during this session */
     if (MapApp.dataCache[type]) {
         return MapApp.dataCache[type];
     }
 
-    /* Another request is already loading it */
     if (MapApp.dataPromises[type]) {
         return MapApp.dataPromises[type];
     }
 
-    MapApp.dataPromises[type] =
-        (async function() {
+    MapApp.dataPromises[type] = (async function() {
 
-            const manifest =
-                await MapData.manifest();
+        const files = {
+            country: "countries",
+            state: "states",
+            district: "districts"
+        };
 
-            const files =
-                manifest[type] || [];
+        const file = files[type];
 
-            const folders = {
-                country: "countries",
-                state: "states",
-                district: "districts"
-            };
+        if (!file) {
+            throw new Error("Unknown map type: " + type);
+        }
 
-            const folder =
-                folders[type];
+        const cacheKey = "global-v2|" + type;
 
-            if (!folder) {
-                throw new Error(
-                    "Unknown map type: " + type
-                );
-            }
+        const cached =
+            await MapApp.getCachedData(cacheKey);
 
-            /*
-             * Cache key is based on the exact list of
-             * files in the manifest.
-             *
-             * If you add a new country later,
-             * the key changes automatically and
-             * fresh data is downloaded.
-             */
-            const cacheKey =
-                "v7|" +
-                type +
-                "|" +
-                files
-                    .map(function(x) {
-                        return x.toLowerCase();
-                    })
-                    .sort()
-                    .join(",");
+        if (
+            cached &&
+            cached.type === "FeatureCollection" &&
+            Array.isArray(cached.features)
+        ) {
+            MapApp.dataCache[type] = cached;
+            return cached;
+        }
 
-            /* Try persistent browser storage first */
-            const cached =
-                await MapApp.getCachedData(
-                    cacheKey
-                );
+        console.log("↓ Loading global " + type + " data...");
 
-            if (
-                cached &&
-                cached.type === "FeatureCollection" &&
-                Array.isArray(cached.features)
-            ) {
+        const response = await fetch(
+            "data/global/" + file + ".json?v=2",
+            { cache: "default" }
+        );
 
-                MapApp.dataCache[type] =
-                    cached;
-
-                console.log(
-                    "✓ " +
-                    type +
-                    " loaded from local cache"
-                );
-
-                return cached;
-            }
-
-            console.log(
-                "↓ Downloading " +
-                type +
-                " data..."
+        if (!response.ok) {
+            throw new Error(
+                "Could not load data/global/" + file + ".json"
             );
+        }
 
-            const datasets =
-                await Promise.all(
-                    files.map(async function(name) {
+        const data = await response.json();
 
-                        const url =
-                            "data/" +
-                            folder +
-                            "/" +
-                            name.toLowerCase() +
-                            ".json";
+        MapApp.dataCache[type] = data;
 
-                        const response =
-                            await fetch(
-                                url,
-                                {
-                                    cache: "no-store"
-                                }
-                            );
+        await MapApp.saveCachedData(
+            cacheKey,
+            data
+        );
 
-                        if (!response.ok) {
-                            throw new Error(
-                                "Could not load " +
-                                url
-                            );
-                        }
+        return data;
 
-                        return await response.json();
-                    })
-                );
-
-            const features = [];
-
-            for (const data of datasets) {
-
-                if (
-                    data &&
-                    data.type === "FeatureCollection" &&
-                    Array.isArray(data.features)
-                ) {
-                    features.push(
-                        ...data.features
-                    );
-                }
-            }
-
-            const result = {
-                type: "FeatureCollection",
-                features: features
-            };
-
-            /* Keep in memory */
-            MapApp.dataCache[type] =
-                result;
-
-            /* Save for future page loads */
-            await MapApp.saveCachedData(
-                cacheKey,
-                result
-            );
-
-            console.log(
-                "✓ " +
-                type +
-                " downloaded and cached"
-            );
-
-            return result;
-
-        })();
+    })();
 
     try {
         return await MapApp.dataPromises[type];
@@ -496,11 +405,6 @@ MapApp.loadAll = async function(type) {
         delete MapApp.dataPromises[type];
     }
 };
-
-
-/* =========================================================
-   BACKGROUND PRELOADING
-   ========================================================= */
 
 MapApp.preloadMapData = async function() {
 
