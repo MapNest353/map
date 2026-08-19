@@ -321,21 +321,33 @@ html, body {
     display: none !important;
 }
 
-/* Version/date display */
+
+
+/* MapNest version */
 #map-version {
-    position: absolute !important;
-    right: 10px !important;
-    bottom: 48px !important;
-    left: auto !important;
-    z-index: 2000 !important;
+    position: fixed !important;
+    right: 12px !important;
+    bottom: 52px !important;
+    z-index: 99999 !important;
+
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
     padding: 4px 7px !important;
     margin: 0 !important;
-    background: rgba(255,255,255,0.65) !important;
-    border: none !important;
+
+    background: rgba(255,255,255,0.75) !important;
+    color: #666 !important;
+
+    border: 0 !important;
     border-radius: 3px !important;
     box-shadow: none !important;
+
+    font-family: Arial, sans-serif !important;
     font-size: 10px !important;
     line-height: 13px !important;
-    color: #777 !important;
+    white-space: nowrap !important;
+
     pointer-events: none !important;
 }
