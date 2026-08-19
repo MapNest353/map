@@ -1,0 +1,274 @@
+/* =========================================================
+   MAP UI
+   ========================================================= */
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, Helvetica, Arial, sans-serif;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    background: #dfe5e8;
+}
+
+
+/* =========================================================
+   TOP MAP LEVEL CONTROLS
+   ========================================================= */
+
+.map-level-controls {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1000;
+
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    padding: 4px;
+
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 10px;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.12),
+        0 1px 2px rgba(0, 0, 0, 0.08);
+
+    backdrop-filter: blur(8px);
+}
+
+.map-level-controls button {
+    min-width: 88px;
+    height: 36px;
+
+    padding: 0 15px;
+
+    border: 0;
+    border-radius: 7px;
+
+    background: transparent;
+    color: #333;
+
+    font-size: 14px;
+    font-weight: 500;
+
+    cursor: pointer;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.map-level-controls button:hover {
+    background: #f0f2f4;
+}
+
+.map-level-controls button:active {
+    transform: translateY(1px);
+}
+
+
+/* =========================================================
+   LEAFLET ZOOM CONTROL
+   ========================================================= */
+
+.leaflet-control-zoom {
+    border: none !important;
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+.leaflet-control-zoom a {
+    width: 34px !important;
+    height: 34px !important;
+    line-height: 34px !important;
+
+    border: none !important;
+
+    color: #333 !important;
+    background: rgba(255, 255, 255, 0.94) !important;
+}
+
+.leaflet-control-zoom a:hover {
+    background: #f3f4f5 !important;
+}
+
+
+/* =========================================================
+   POLYGON HOVER
+   ========================================================= */
+
+.leaflet-interactive {
+    outline: none !important;
+}
+
+.leaflet-interactive:focus {
+    outline: none !important;
+}
+
+
+/* =========================================================
+   NAME TOOLTIP
+   ========================================================= */
+
+.leaflet-tooltip {
+    padding: 6px 10px !important;
+
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    border-radius: 6px !important;
+
+    background: rgba(255, 255, 255, 0.97) !important;
+    color: #222 !important;
+
+    font-size: 13px !important;
+    font-weight: 500 !important;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.leaflet-tooltip::before {
+    display: none !important;
+}
+
+
+/* =========================================================
+   SEARCH BOX
+   ========================================================= */
+
+.leaflet-control-geocoder,
+.search-box,
+#search {
+    border-radius: 9px !important;
+}
+
+
+/* =========================================================
+   BOTTOM LEGEND
+   ========================================================= */
+
+.legend,
+.map-legend {
+    border-radius: 9px !important;
+
+    background: rgba(255, 255, 255, 0.94) !important;
+
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.12) !important;
+
+    border: 1px solid rgba(0, 0, 0, 0.10) !important;
+}
+
+
+/* =========================================================
+   MOBILE / SMALL WINDOWS
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .map-level-controls {
+        top: 10px;
+        right: 10px;
+    }
+
+    .map-level-controls button {
+        min-width: auto;
+        padding: 0 10px;
+        font-size: 13px;
+    }
+}
+
+/* =========================
+   GLOBAL SEARCH RESULTS
+   ========================= */
+
+#results {
+    display: none;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.search-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 10px 14px;
+    background: white;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.search-result:last-child {
+    border-bottom: none;
+}
+
+.search-result:hover {
+    background: #f3f6f8;
+}
+
+.search-result-name {
+    color: #222;
+    font-weight: 500;
+}
+
+.search-result-level {
+    color: #888;
+    font-size: 11px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+}
+
+
+
+/* =========================
+   MAP EXPORT CONTROLS
+   ========================= */
+
+.map-export-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    gap: 6px;
+}
+
+.map-export-controls button:hover {
+    background: #f2f2f2 !important;
+}
+
+
+#save-export-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2000;
+    display: flex;
+    gap: 6px;
+}
+
+#save-export-controls button {
+    padding: 8px 13px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#save-export-controls button:hover {
+    background: #f2f2f2;
+}
+

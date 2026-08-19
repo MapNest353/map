@@ -1,0 +1,341 @@
+window.MapApp = {};
+
+MapApp.map = L.map("map", {
+    minZoom: 2,
+    maxZoom: 18,
+    zoomControl: true,
+    worldCopyJump: false
+});
+
+MapApp.map.setView([20, 0], 2);
+
+L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+    {
+        maxZoom: 20,
+        attribution: "&copy; OpenStreetMap &copy; CARTO"
+    }
+).addTo(MapApp.map);
+
+MapApp.countryLayer = null;
+MapApp.stateLayer = null;
+MapApp.districtLayer = null;
+
+MapApp.saveView = function() {
+    return {
+        center: MapApp.map.getCenter(),
+        zoom: MapApp.map.getZoom()
+    };
+};
+
+MapApp.restoreView = function(view) {
+    if (view) {
+        MapApp.map.setView(view.center, view.zoom, {
+            animate: false
+        });
+    }
+};
+
+MapApp.removeLayers = function() {
+
+    if (MapApp.countryLayer) {
+        MapApp.map.removeLayer(MapApp.countryLayer);
+        MapApp.countryLayer = null;
+    }
+
+    if (MapApp.stateLayer) {
+        MapApp.map.removeLayer(MapApp.stateLayer);
+        MapApp.stateLayer = null;
+    }
+
+    if (MapApp.districtLayer) {
+        MapApp.map.removeLayer(MapApp.districtLayer);
+        MapApp.districtLayer = null;
+    }
+};;;
+
+
+MapApp.loadAll = async function(type) {
+
+    const manifest = await MapData.manifest();
+
+    const files = manifest[type] || [];
+
+    const datasets = await Promise.all(
+        files.map(async name => {
+
+            const response = await fetch(
+                `data/${
+                    type === "country"
+                        ? "countries"
+                        : type === "state"
+                            ? "states"
+                            : "districts"
+                }/${name}.json?v=${Date.now()}`
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Could not load ${type}: ${name}.json`
+                );
+            }
+
+            return await response.json();
+        })
+    );
+
+    const features = [];
+
+    for (const data of datasets) {
+
+        if (data.type === "FeatureCollection") {
+            features.push(...data.features);
+        }
+
+    }
+
+    return {
+        type: "FeatureCollection",
+        features: features
+    };
+};
+
+
+
+MapApp.getFeatureName = function(feature) {
+
+    const p = feature.properties || {};
+
+    // Always prefer English/full-name fields.
+    // Never use the local-language NAME field when an English
+    // alternative is available.
+    const name =
+        p.NAME_EN ||
+        p.NAME_ENG ||
+        p.NAME_LATN ||
+        p.NAME_ENGLISH ||
+        p.NAME_0_EN ||
+        p.NAME_1_EN ||
+        p.NAME_2_EN ||
+        p.NAME_3_EN ||
+        p.NAME_4_EN ||
+        p.NAME_5_EN ||
+        p.name_en ||
+        p.NAME ||
+        p.name ||
+        p.Name ||
+        "Unknown";
+
+    return name;
+};
+
+    // Always prefer English/full-name fields.
+    // Never use the local-language NAME field when an English
+    // alternative is available.
+    const name =
+        p.NAME_EN ||
+        p.NAME_ENG ||
+        p.NAME_LATN ||
+        p.NAME_ENGLISH ||
+        p.NAME_0_EN ||
+        p.NAME_1_EN ||
+        p.NAME_2_EN ||
+        p.NAME_3_EN ||
+        p.NAME_4_EN ||
+        p.NAME_5_EN ||
+        p.name_en ||
+        p.NAME ||
+        p.name ||
+        p.Name ||
+        "Unknown";
+
+    return name;
+};
+
+    return (
+        p.NAME_0 ||
+        p.NAME_1 ||
+        p.NAME_2 ||
+        p.NAME_3 ||
+        p.NAME_4 ||
+        p.NAME_5 ||
+        p.NAME_EN ||
+        p.NAME ||
+        p.name ||
+        p.Name ||
+        p.NAME_ENG ||
+        p.NAME_LATN ||
+        "Unknown"
+    );
+};
+
+MapApp.bindHoverName = function(feature, layer) {
+
+    const name = MapApp.getFeatureName(feature);
+
+    if (name && name !== "Unknown") {
+        layer.bindTooltip(name, {
+            sticky: true,
+            direction: "top",
+            opacity: 0.95
+        });
+    }
+
+    layer.on("click", function() {
+        const el = this.getElement();
+        if (el) el.blur();
+    });
+};
+
+MapApp.showCountry = async function() {
+
+    MapApp.removeLayers();
+
+    const data =
+        await MapApp.loadAll("country");
+
+    MapApp.countryLayer = L.geoJSON(data, {
+
+        style: {
+            color: "#333",
+            weight: 1,
+            fillColor: "#3388ff",
+            fillOpacity: 0.08
+        },
+
+        onEachFeature: MapApp.bindHoverName
+
+    }).addTo(MapApp.map);
+
+    MapApp.map.setView([20, 0], 2);
+};
+
+
+MapApp.showStates = async function() {
+
+    const savedView = MapApp.saveView();
+
+
+    MapApp.removeLayers();
+
+    const data =
+        await MapApp.loadAll("state");
+
+    MapApp.stateLayer = L.geoJSON(data, {
+
+        style: {
+            color: "#333",
+            weight: 1,
+            fillColor: "#44aa55",
+            fillOpacity: 0.08
+        },
+
+        onEachFeature: MapApp.bindHoverName
+
+    }).addTo(MapApp.map);
+
+    MapApp.restoreView(savedView);
+
+};
+
+
+MapApp.showDistricts = async function() {
+
+    const savedView = MapApp.saveView();
+
+
+    MapApp.removeLayers();
+
+    const data =
+        await MapApp.loadAll("district");
+
+    MapApp.districtLayer = L.geoJSON(data, {
+
+        style: {
+            color: "#333",
+            weight: 1,
+            fillColor: "#ffaa44",
+            fillOpacity: 0.08
+        },
+
+        onEachFeature: MapApp.bindHoverName
+
+    }).addTo(MapApp.map);
+
+    MapApp.restoreView(savedView);
+
+};
+
+
+async function startMap() {
+
+    try {
+        await MapApp.showCountry();
+    } catch (error) {
+        console.error(error);
+    }
+
+
+    const controls =
+        document.createElement("div");
+
+    controls.style.position = "absolute";
+    controls.style.top = "10px";
+    controls.style.right = "10px";
+    controls.style.zIndex = "1000";
+    controls.style.display = "flex";
+    controls.style.gap = "6px";
+
+
+    const countryButton =
+        document.createElement("button");
+
+    countryButton.textContent = "Country";
+
+
+    const statesButton =
+        document.createElement("button");
+
+    statesButton.textContent = "States";
+
+
+    const districtsButton =
+        document.createElement("button");
+
+    districtsButton.textContent = "Districts";
+
+
+    for (const button of [
+        countryButton,
+        statesButton,
+        districtsButton
+    ]) {
+
+        button.style.padding = "8px 14px";
+        button.style.background = "white";
+        button.style.border = "1px solid #ccc";
+        button.style.borderRadius = "6px";
+        button.style.cursor = "pointer";
+
+    }
+
+
+    countryButton.onclick =
+        MapApp.showCountry;
+
+    statesButton.onclick =
+        MapApp.showStates;
+
+    districtsButton.onclick =
+        MapApp.showDistricts;
+
+
+    controls.appendChild(statesButton);
+    controls.appendChild(countryButton);
+    controls.appendChild(districtsButton);
+
+    document.body.appendChild(controls);
+}
+
+
+startMap();

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>World Map</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html, body, #map {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+#map {
+    background: #ffffff;
+}
+
+/* SEARCH */
+
+#searchContainer {
+    position: absolute;
+    z-index: 1000;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    max-width: calc(100% - 30px);
+}
+
+#search {
+    width: 100%;
+    padding: 11px 14px;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+#results {
+    margin-top: 5px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    display: none;
+}
+
+.result {
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.result:hover {
+    background: #eee;
+}
+
+/* LEVEL BUTTON */
+
+#levelButton {
+    position: absolute;
+    z-index: 1000;
+    top: 15px;
+    right: 15px;
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+#levelButton:hover {
+    background: #eee;
+}
+
+/* INFO */
+
+#info {
+    position: absolute;
+    z-index: 1000;
+    bottom: 20px;
+    left: 20px;
+    padding: 12px 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    font-size: 13px;
+}
+
+#infoName {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+</style>
+    <link rel="stylesheet" href="css/style.css?v=2026081901">
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div id="searchContainer">
+
+    <input
+        id="search"
+        type="text"
+        placeholder="Search..."
+        autocomplete="off"
+    >
+
+    <div id="results"></div>
+
+</div>
+
+<button id="levelButton">
+    Countries
+</button>
+
+<div id="info">
+
+    <div id="infoName">
+        World
+    </div>
+
+    <div>
+        Click = color &nbsp; | &nbsp;
+        Shift + click = remove
+    </div>
+
+</div>
+
+
+<!-- Leaflet -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- Our code -->
+
+<script src="js/data-loader.js?v=9999"></script>
+
+<script src="js/layers.js?v=202608191130"></script>
+
+<script src="js/controls.js?v=202608191130"></script>
+
+<script src="js/map.js?v=202608191130"></script>
+
+
+<!-- save-export.js disabled: functionality is built into controls.js -->
+
+</body>
+</html>

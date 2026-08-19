@@ -1,0 +1,453 @@
+window.MapApp = {};
+
+/* =========================
+   MAP
+========================= */
+
+MapApp.map = L.map("map", {
+    minZoom: 2,
+    maxZoom: 18,
+    zoomControl: true,
+    worldCopyJump: false
+});
+
+MapApp.map.setView([20, 0], 2);
+
+L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
+    {
+        maxZoom: 20,
+        attribution: "&copy; OpenStreetMap &copy; CARTO"
+    }
+).addTo(MapApp.map);
+
+
+/* =========================
+   LAYERS
+========================= */
+
+MapApp.countryLayer = null;
+MapApp.stateLayer = null;
+MapApp.districtLayer = null;
+
+
+/* =========================
+   REMOVE ALL DATA LAYERS
+========================= */
+
+MapApp.removeLayers = function() {
+
+    if (MapApp.countryLayer) {
+        MapApp.map.removeLayer(MapApp.countryLayer);
+        MapApp.countryLayer = null;
+    }
+
+    if (MapApp.stateLayer) {
+        MapApp.map.removeLayer(MapApp.stateLayer);
+        MapApp.stateLayer = null;
+    }
+
+    if (MapApp.districtLayer) {
+        MapApp.map.removeLayer(MapApp.districtLayer);
+        MapApp.districtLayer = null;
+    }
+};
+
+
+/* =========================
+   SAVE / RESTORE VIEW
+========================= */
+
+MapApp.saveView = function() {
+
+    const center = MapApp.map.getCenter();
+
+    return {
+        lat: center.lat,
+        lng: center.lng,
+        zoom: MapApp.map.getZoom()
+    };
+};
+
+
+MapApp.restoreView = function(view) {
+
+    if (!view) return;
+
+    MapApp.map.setView(
+        [view.lat, view.lng],
+        view.zoom,
+        {
+            animate: false
+        }
+    );
+};
+
+
+/* =========================
+   NAME
+========================= */
+
+MapApp.getFeatureName = function(feature) {
+
+    const p = feature.properties || {};
+
+    /*
+       Prefer English/full-name properties.
+       Common GADM / other geographic datasets
+       use several different property names.
+    */
+
+    return (
+        p.NAME_EN ||
+        p.NAME_ENG ||
+        p.NAME_ENGLISH ||
+        p.NAME_LATN ||
+        p.NAME_0_EN ||
+        p.NAME_1_EN ||
+        p.NAME_2_EN ||
+        p.NAME_3_EN ||
+        p.NAME_4_EN ||
+        p.NAME_5_EN ||
+        p.name_en ||
+        p.NAME ||
+        p.name ||
+        p.Name ||
+        "Unknown"
+    );
+};
+
+
+/* =========================
+   HOVER + CLICK
+========================= */
+
+MapApp.bindFeature = function(feature, layer) {
+
+    const name = MapApp.getFeatureName(feature);
+
+    if (name && name !== "Unknown") {
+
+        layer.bindTooltip(name, {
+            sticky: true,
+            direction: "top",
+            opacity: 0.95
+        });
+
+    }
+
+
+    /* Click = color */
+
+    layer.on("click", function() {
+
+        layer.setStyle({
+            fillOpacity: 0.65
+        });
+
+        /* Remove keyboard focus rectangle */
+
+        const element = layer.getElement();
+
+        if (element) {
+            element.blur();
+        }
+
+    });
+
+};
+
+
+/* =========================
+   COUNTRY MAP
+========================= */
+
+MapApp.showCountry = async function() {
+
+    const view = MapApp.saveView();
+
+    MapApp.removeLayers();
+
+    const data =
+        await MapApp.loadAll("country");
+
+    MapApp.countryLayer =
+        L.geoJSON(data, {
+
+            style: {
+                color: "#333",
+                weight: 1,
+                fillColor: "#3388ff",
+                fillOpacity: 0.08
+            },
+
+            onEachFeature:
+                MapApp.bindFeature
+
+        }).addTo(MapApp.map);
+
+
+    /*
+       Only the FIRST loading of the map
+       uses the world view.
+
+       Switching back to countries
+       preserves the current position.
+    */
+
+    if (MapApp.firstCountryLoad) {
+
+        MapApp.restoreView(view);
+
+    } else {
+
+        MapApp.map.setView(
+            [20, 0],
+            2,
+            {
+                animate: false
+            }
+        );
+
+        MapApp.firstCountryLoad = true;
+
+    }
+
+};
+
+
+/* =========================
+   STATES
+========================= */
+
+MapApp.showStates = async function() {
+
+    const view = MapApp.saveView();
+
+    MapApp.removeLayers();
+
+    const data =
+        await MapApp.loadAll("state");
+
+    MapApp.stateLayer =
+        L.geoJSON(data, {
+
+            style: {
+                color: "#333",
+                weight: 1,
+                fillColor: "#44aa55",
+                fillOpacity: 0.08
+            },
+
+            onEachFeature:
+                MapApp.bindFeature
+
+        }).addTo(MapApp.map);
+
+
+    /*
+       IMPORTANT:
+       Do NOT fit bounds.
+       Keep exactly the same position/zoom.
+    */
+
+    MapApp.restoreView(view);
+
+};
+
+
+/* =========================
+   DISTRICTS
+========================= */
+
+MapApp.showDistricts = async function() {
+
+    const view = MapApp.saveView();
+
+    MapApp.removeLayers();
+
+    const data =
+        await MapApp.loadAll("district");
+
+    MapApp.districtLayer =
+        L.geoJSON(data, {
+
+            style: {
+                color: "#333",
+                weight: 1,
+                fillColor: "#ffaa44",
+                fillOpacity: 0.08
+            },
+
+            onEachFeature:
+                MapApp.bindFeature
+
+        }).addTo(MapApp.map);
+
+
+    /*
+       IMPORTANT:
+       Do NOT fit bounds.
+       Keep exactly the same position/zoom.
+    */
+
+    MapApp.restoreView(view);
+
+};
+
+
+/* =========================
+   BUTTONS
+========================= */
+
+async function startMap() {
+
+    /*
+       Inject CSS directly.
+       No external CSS file required.
+    */
+
+    const style =
+        document.createElement("style");
+
+    style.textContent = `
+        .leaflet-interactive:focus {
+            outline: none !important;
+        }
+
+        .leaflet-tooltip {
+            font-size: 14px;
+            font-weight: 500;
+        }
+    `;
+
+    document.head.appendChild(style);
+
+
+    /*
+       Show ALL countries when site starts.
+    */
+
+    try {
+
+        MapApp.firstCountryLoad = false;
+
+        await MapApp.showCountry();
+
+    } catch (error) {
+
+        console.error(
+            "Could not load countries:",
+            error
+        );
+
+    }
+
+
+    /*
+       Controls
+    */
+
+    const controls =
+        document.createElement("div");
+
+    controls.style.position =
+        "absolute";
+
+    controls.style.top =
+        "10px";
+
+    controls.style.right =
+        "10px";
+
+    controls.style.zIndex =
+        "1000";
+
+    controls.style.display =
+        "flex";
+
+    controls.style.gap =
+        "6px";
+
+
+    /*
+       STATES BUTTON
+    */
+
+    const statesButton =
+        document.createElement("button");
+
+    statesButton.textContent =
+        "States";
+
+
+    /*
+       DISTRICTS BUTTON
+    */
+
+    const districtsButton =
+        document.createElement("button");
+
+    districtsButton.textContent =
+        "Districts";
+
+
+    /*
+       Button styling
+    */
+
+    for (
+        const button of [
+            statesButton,
+            districtsButton
+        ]
+    ) {
+
+        button.style.padding =
+            "8px 14px";
+
+        button.style.background =
+            "white";
+
+        button.style.border =
+            "1px solid #ccc";
+
+        button.style.borderRadius =
+            "6px";
+
+        button.style.cursor =
+            "pointer";
+
+        button.style.fontSize =
+            "14px";
+
+    }
+
+
+    /*
+       Actions
+    */
+
+    statesButton.onclick =
+        MapApp.showStates;
+
+    districtsButton.onclick =
+        MapApp.showDistricts;
+
+
+    controls.appendChild(
+        statesButton
+    );
+
+    controls.appendChild(
+        districtsButton
+    );
+
+    document.body.appendChild(
+        controls
+    );
+
+}
+
+
+startMap();

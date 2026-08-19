@@ -1,0 +1,32 @@
+{
+  "country": [
+    "deu",
+    "dma",
+    "india",
+    "ken",
+    "phl",
+    "pol",
+    "tha",
+    "usa",
+    "hun"
+  ],
+  "state": [
+    "deu",
+    "dma",
+    "india",
+    "ken",
+    "phl",
+    "pol",
+    "tha",
+    "usa",
+    "hun"
+  ],
+  "district": [
+    "india",
+    "usa",
+    "hun"
+  ],
+  "adm3": [],
+  "adm4": [],
+  "adm5": []
+}
