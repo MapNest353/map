@@ -20,7 +20,7 @@ window.MapData = {
         const src = `data/${folder}/${country.toLowerCase()}.json`;
 
         const response =
-            await fetch(src + "?v=" + Date.now());
+            await fetch(src, { cache: "default" });
 
         if (!response.ok) {
             throw new Error("Could not load " + src);
@@ -32,7 +32,7 @@ window.MapData = {
     async manifest() {
 
         const response =
-            await fetch("data/manifest.json?v=" + Date.now());
+            await fetch("data/manifest.json", { cache: "default" });
 
         if (!response.ok) {
             throw new Error("Could not load data/manifest.json");
