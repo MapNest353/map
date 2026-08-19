@@ -73,6 +73,16 @@ MapApp.removeLayers = function () {
  * States and Districts preload in the background.
  */
 
+MapApp.clearOldDataCache = function() {
+    try {
+        indexedDB.deleteDatabase("MapNestDataCache");
+    } catch (e) {
+        console.warn("Could not clear old map cache:", e);
+    }
+};
+
+MapApp.clearOldDataCache();
+
 MapApp.dataCache = {};
 MapApp.dataPromises = {};
 MapApp.cacheDB = null;
@@ -206,7 +216,7 @@ MapApp.getDataCacheKey = function(
 ) {
 
     return (
-        "v3::" +
+        "v4::" +
         type +
         "::" +
         files.join(",").toLowerCase()
@@ -370,7 +380,7 @@ MapApp.loadAll = async function(type) {
              * fresh data is downloaded.
              */
             const cacheKey =
-                "v3|" +
+                "v7|" +
                 type +
                 "|" +
                 files
@@ -425,7 +435,7 @@ MapApp.loadAll = async function(type) {
                             await fetch(
                                 url,
                                 {
-                                    cache: "default"
+                                    cache: "no-store"
                                 }
                             );
 
