@@ -232,94 +232,6 @@ MapControls.resetColors = function() {
    MAP IMAGE EXPORT
    ========================================================= */
 
-MapControls.exportMap = async function(format) {
-
-    if (typeof html2canvas === "undefined") {
-        alert("Image export library has not loaded yet.");
-        return;
-    }
-
-    const map =
-        document.getElementById("map");
-
-    const hide = [
-        document.getElementById("searchContainer"),
-        document.querySelector(".map-level-controls"),
-        document.getElementById("levelButton"),
-        document.getElementById("info"),
-        document.querySelector(".map-export-controls")
-    ];
-
-    hide.forEach(function(el) {
-        if (el) {
-            el.dataset.previousDisplay =
-                el.style.display;
-
-            el.style.display = "none";
-        }
-    });
-
-    try {
-
-        const canvas =
-            await html2canvas(map, {
-                useCORS: true,
-                backgroundColor: "#ffffff",
-                logging: false,
-                scale: 2
-            });
-
-        const mime =
-            format === "jpg"
-                ? "image/jpeg"
-                : "image/png";
-
-        const extension =
-            format === "jpg"
-                ? "jpg"
-                : "png";
-
-        const quality =
-            format === "jpg"
-                ? 0.95
-                : undefined;
-
-        const link =
-            document.createElement("a");
-
-        link.download =
-            "my-map." + extension;
-
-        link.href =
-            canvas.toDataURL(
-                mime,
-                quality
-            );
-
-        link.click();
-
-    } catch (error) {
-
-        console.error("Map export failed:", error);
-
-        alert(
-            "Could not export the map. " +
-            "Please try again."
-        );
-
-    } finally {
-
-        hide.forEach(function(el) {
-
-            if (el) {
-                el.style.display =
-                    el.dataset.previousDisplay || "";
-            }
-
-        });
-    }
-};
-
 
 /* =========================================================
    EXPORT / RESET BUTTONS
@@ -327,68 +239,29 @@ MapControls.exportMap = async function(format) {
 
 MapControls.createExportControls = function() {
 
-    if (
-        document.querySelector(
-            ".map-export-controls"
-        )
-    ) {
+    if (document.querySelector(".map-export-controls")) {
         return;
     }
 
-    const box =
-        document.createElement("div");
+    const box = document.createElement("div");
+    box.className = "map-export-controls";
 
-    box.className =
-        "map-export-controls";
-
-    const png =
-        document.createElement("button");
-
-    png.textContent = "PNG";
-
-    png.onclick = function() {
-        MapControls.exportMap("png");
-    };
-
-    const jpg =
-        document.createElement("button");
-
-    jpg.textContent = "JPG";
-
-    jpg.onclick = function() {
-        MapControls.exportMap("jpg");
-    };
-
-    const reset =
-        document.createElement("button");
-
+    const reset = document.createElement("button");
     reset.textContent = "Reset";
 
     reset.onclick = function() {
-
-        if (
-            confirm(
-                "Reset all saved colors?"
-            )
-        ) {
+        if (confirm("Reset all saved colors?")) {
             MapControls.resetColors();
         }
     };
 
-    [png, jpg, reset].forEach(function(button) {
+    reset.style.padding = "7px 11px";
+    reset.style.border = "1px solid #ccc";
+    reset.style.borderRadius = "6px";
+    reset.style.background = "white";
+    reset.style.cursor = "pointer";
 
-        button.style.padding = "7px 11px";
-        button.style.border = "1px solid #ccc";
-        button.style.borderRadius = "6px";
-        button.style.background = "white";
-        button.style.cursor = "pointer";
-
-    });
-
-    box.appendChild(png);
-    box.appendChild(jpg);
     box.appendChild(reset);
-
     document.body.appendChild(box);
 };
 

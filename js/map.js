@@ -790,7 +790,23 @@ MapApp.hideLoading = function () {
     }
 };
 
+MapApp.updateLevelSelection = function(level) {
+    document.querySelectorAll(
+        ".map-level-controls button, .mobile-levels button"
+    ).forEach(function(button) {
+        const text = button.textContent.trim().toLowerCase();
+        const match =
+            (level === "country" && text === "country") ||
+            (level === "state" && text === "states") ||
+            (level === "district" && text === "districts");
+
+        button.classList.toggle("active", match);
+    });
+};
+
 MapApp.showCountry = async function () {
+
+    MapApp.updateLevelSelection("country");
 
     MapApp.showLoading();
 
@@ -839,6 +855,8 @@ MapApp.showCountry = async function () {
 
 MapApp.showStates = async function () {
 
+    MapApp.updateLevelSelection("state");
+
     MapApp.showLoading();
 
     await new Promise(function(resolve) {
@@ -885,6 +903,8 @@ MapApp.showStates = async function () {
 };
 
 MapApp.showDistricts = async function () {
+
+    MapApp.updateLevelSelection("district");
 
     MapApp.showLoading();
 
@@ -1072,6 +1092,78 @@ async function startMap() {
     controls.appendChild(districtsButton);
 
     document.body.appendChild(controls);
+
+    /* Mobile menu */
+    if (!document.getElementById("mobile-menu-button")) {
+
+        const menuButton = document.createElement("button");
+        menuButton.id = "mobile-menu-button";
+        menuButton.innerHTML = "☰";
+        menuButton.setAttribute("aria-label", "Menu");
+
+        const menu = document.createElement("div");
+        menu.id = "mobile-menu";
+
+        const title = document.createElement("div");
+        title.className = "mobile-menu-title";
+        title.textContent = "Map level";
+
+        const levels = document.createElement("div");
+        levels.className = "mobile-levels";
+
+        [
+            ["Country", MapApp.showCountry, "country"],
+            ["States", MapApp.showStates, "state"],
+            ["Districts", MapApp.showDistricts, "district"]
+        ].forEach(function(item) {
+            const button = document.createElement("button");
+            button.textContent = item[0];
+            button.dataset.level = item[2];
+            button.onclick = async function() {
+                menu.classList.remove("open");
+                await item[1]();
+                updateMobileLevel(item[2]);
+            };
+            levels.appendChild(button);
+        });
+
+        const actions = document.createElement("div");
+        actions.className = "mobile-actions";
+
+        function action(text, fn) {
+            const button = document.createElement("button");
+            button.className = "mobile-action";
+            button.textContent = text;
+            button.onclick = fn;
+            actions.appendChild(button);
+        }
+
+        action("Reset", function() {
+            if (window.MapControls) MapControls.resetColors();
+        });
+
+        menu.appendChild(title);
+        menu.appendChild(levels);
+        menu.appendChild(actions);
+
+        document.body.appendChild(menuButton);
+        document.body.appendChild(menu);
+
+        function updateMobileLevel(level) {
+            levels.querySelectorAll("button").forEach(function(button) {
+                button.classList.toggle(
+                    "active",
+                    button.dataset.level === level
+                );
+            });
+        }
+
+        menuButton.onclick = function() {
+            menu.classList.toggle("open");
+        };
+
+        updateMobileLevel("country");
+    }
 }
 
 

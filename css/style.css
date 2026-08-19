@@ -510,3 +510,213 @@ html, body {
 @keyframes mapLoadingSpin {
     to { transform: rotate(360deg); }
 }
+
+
+/* =========================================================
+   MOBILE MAP UI
+   ========================================================= */
+
+#mobile-menu-button,
+#mobile-menu {
+    display: none;
+}
+
+@media (max-width: 700px) {
+
+    /* Remove desktop-only clutter */
+    #searchContainer,
+    .map-level-controls,
+    .map-export-controls,
+    #save-export-controls {
+        display: none !important;
+    }
+
+    /* Keep map completely full-screen */
+    #map {
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+
+    /* Menu button */
+    #mobile-menu-button {
+        display: flex !important;
+        position: fixed !important;
+        top: 12px !important;
+        right: 12px !important;
+        width: 44px !important;
+        height: 44px !important;
+        z-index: 10000 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: 0 !important;
+        border-radius: 12px !important;
+        background: rgba(255,255,255,.94) !important;
+        box-shadow: 0 2px 12px rgba(0,0,0,.16) !important;
+        color: #333 !important;
+        font-size: 23px !important;
+        cursor: pointer !important;
+    }
+
+    /* Mobile menu */
+    #mobile-menu {
+        position: fixed !important;
+        top: 64px !important;
+        right: 12px !important;
+        width: 220px !important;
+        z-index: 9999 !important;
+        padding: 10px !important;
+        box-sizing: border-box !important;
+        border-radius: 14px !important;
+        background: rgba(255,255,255,.96) !important;
+        box-shadow: 0 5px 24px rgba(0,0,0,.20) !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    #mobile-menu.open {
+        display: flex !important;
+    }
+
+    .mobile-menu-title {
+        padding: 5px 4px 7px !important;
+        color: #777 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: .5px !important;
+    }
+
+    .mobile-levels {
+        display: grid !important;
+        grid-template-columns: repeat(3,1fr) !important;
+        gap: 4px !important;
+        padding: 3px !important;
+        background: #f1f3f5 !important;
+        border-radius: 9px !important;
+    }
+
+    .mobile-levels button,
+    .mobile-action {
+        border: 0 !important;
+        border-radius: 8px !important;
+        background: transparent !important;
+        color: #555 !important;
+        min-height: 38px !important;
+        font-size: 12px !important;
+        cursor: pointer !important;
+    }
+
+    .mobile-levels button.active {
+        background: white !important;
+        color: #222 !important;
+        font-weight: 600 !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,.12) !important;
+    }
+
+    .mobile-actions {
+        display: grid !important;
+        grid-template-columns: repeat(3,1fr) !important;
+        gap: 5px !important;
+    }
+
+    .mobile-action {
+        background: #f5f6f7 !important;
+    }
+
+    .mobile-action:active,
+    .mobile-levels button:active {
+        transform: scale(.97);
+    }
+}
+
+/* MOBILE FINAL UI FIX */
+@media (max-width: 700px) {
+
+    /* Hide the old level button + desktop selector */
+    #levelButton,
+    .map-level-controls {
+        display: none !important;
+    }
+
+    /* Compact search button */
+    #searchContainer {
+        display: block !important;
+        top: 12px !important;
+        left: 12px !important;
+        transform: none !important;
+        width: 44px !important;
+        max-width: none !important;
+        z-index: 10000 !important;
+        transition: width .22s ease !important;
+    }
+
+    #search {
+        width: 44px !important;
+        height: 44px !important;
+        padding: 0 !important;
+        border-radius: 12px !important;
+        font-size: 0 !important;
+        cursor: pointer !important;
+        background-color: rgba(255,255,255,.96) !important;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-4-4'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: center !important;
+        background-size: 20px !important;
+    }
+
+    #search:focus {
+        width: 230px !important;
+        padding: 0 14px !important;
+        font-size: 14px !important;
+        background-image: none !important;
+        cursor: text !important;
+    }
+
+    #search::placeholder {
+        color: #888 !important;
+        opacity: 1 !important;
+    }
+
+    #search:not(:focus)::placeholder {
+        color: transparent !important;
+    }
+
+    #results {
+        width: 230px !important;
+        margin-top: 5px !important;
+        max-height: 45vh !important;
+    }
+
+    /* Menu sits independently on the right */
+    #mobile-menu-button {
+        top: 12px !important;
+        right: 12px !important;
+    }
+
+    #mobile-menu {
+        top: 64px !important;
+        right: 12px !important;
+    }
+}
+
+@media (max-width: 700px) {
+    .leaflet-control-zoom {
+        display: none !important;
+    }
+}
+
+/* Keep selected map level visibly highlighted */
+.map-level-controls button.active,
+.mobile-levels button.active {
+    background: #eef0f2 !important;
+    color: #333 !important;
+    font-weight: 600 !important;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.04) !important;
+}
+
+.map-level-controls button:hover,
+.mobile-levels button:hover {
+    background: #eef0f2 !important;
+}
+
+
