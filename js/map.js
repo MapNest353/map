@@ -74,7 +74,6 @@ MapApp.removeLayers = function () {
  */
 
 MapApp.dataCache = {};
-MapApp.layerCache = {};
 MapApp.dataPromises = {};
 MapApp.cacheDB = null;
 
@@ -326,116 +325,6 @@ MapApp.saveCachedData = async function(key, data) {
 };
 
 
-/*
- * =========================================================
- * PRE-BUILT LEAFLET LAYERS
- * =========================================================
- *
- * GeoJSON is downloaded and parsed once.
- * Then the Leaflet layer itself is created once in
- * the background and kept ready for instant switching.
- */
-
-MapApp.buildLayer = function(data, level) {
-
-    if (MapApp.layerCache[level]) {
-        return MapApp.layerCache[level];
-    }
-
-    const styles = {
-        country: {
-            color: "#333",
-            weight: 1,
-            fillColor: "#3388ff",
-            fillOpacity: 0.08
-        },
-
-        state: {
-            color: "#333",
-            weight: 1,
-            fillColor: "#44aa55",
-            fillOpacity: 0.08
-        },
-
-        district: {
-            color: "#333",
-            weight: 1,
-            fillColor: "#ffaa44",
-            fillOpacity: 0.08
-        }
-    };
-
-    const layer =
-        L.geoJSON(data, {
-
-            renderer:
-                MapApp.geoRenderer ||
-                undefined,
-
-            style:
-                styles[level],
-
-            onEachFeature:
-                function(feature, featureLayer) {
-
-                    MapApp.bindHoverName(
-                        feature,
-                        featureLayer,
-                        level
-                    );
-
-                    featureLayer.on(
-                        "click",
-                        function(event) {
-
-                            MapControls.handleClick(
-                                event,
-                                featureLayer,
-                                level
-                            );
-
-                        }
-                    );
-                }
-        });
-
-    /*
-     * IMPORTANT:
-     * Do NOT add this to the map here.
-     *
-     * It is fully constructed and waiting,
-     * but invisible because it isn't attached
-     * to the Leaflet map yet.
-     */
-
-    MapApp.layerCache[level] = layer;
-
-    console.log(
-        "✓ " +
-        level +
-        " Leaflet layer pre-built"
-    );
-
-    return layer;
-};
-
-
-MapApp.prebuildLayer = async function(level) {
-
-    if (MapApp.layerCache[level]) {
-        return MapApp.layerCache[level];
-    }
-
-    const data =
-        await MapApp.loadAll(level);
-
-    return MapApp.buildLayer(
-        data,
-        level
-    );
-};
-
-
 MapApp.loadAll = async function(type) {
 
     /* Already loaded during this session */
@@ -606,7 +495,7 @@ MapApp.loadAll = async function(type) {
 MapApp.preloadMapData = async function() {
 
     /*
-     * Country is already visible.
+     * Country is already loaded before this starts.
      */
 
     await new Promise(function(resolve) {
@@ -616,15 +505,13 @@ MapApp.preloadMapData = async function() {
     try {
 
         console.log(
-            "↓ Preparing States..."
+            "↓ Background loading States..."
         );
 
-        await MapApp.prebuildLayer(
-            "state"
-        );
+        await MapApp.loadAll("state");
 
         console.log(
-            "✓ States completely ready"
+            "✓ States ready"
         );
 
     } catch (error) {
@@ -636,42 +523,28 @@ MapApp.preloadMapData = async function() {
     }
 
     /*
-     * Give the browser a paint opportunity.
+     * Give the browser a chance to paint before
+     * beginning the larger district dataset.
      */
 
     await new Promise(function(resolve) {
 
-        if (window.requestIdleCallback) {
-
-            requestIdleCallback(
-                function() {
-                    resolve();
-                },
-                { timeout: 1000 }
-            );
-
-        } else {
-
-            setTimeout(
-                resolve,
-                50
-            );
-        }
+        requestAnimationFrame(function() {
+            resolve();
+        });
 
     });
 
     try {
 
         console.log(
-            "↓ Preparing Districts..."
+            "↓ Background loading Districts..."
         );
 
-        await MapApp.prebuildLayer(
-            "district"
-        );
+        await MapApp.loadAll("district");
 
         console.log(
-            "✓ Districts completely ready"
+            "✓ Districts ready"
         );
 
     } catch (error) {
@@ -683,7 +556,415 @@ MapApp.preloadMapData = async function() {
     }
 
     console.log(
-        "✓ All map layers pre-built"
+        "✓ All map data cached"
+    );
+};
+
+
+MapApp.getFeatureName = function(feature, level) {
+
+    const p = feature.properties || {};
+
+    const valid = value => {
+        if (value === undefined || value === null) return "";
+        const x = String(value).trim();
+        if (!x) return "";
+        if (["NA", "NULL", "UNKNOWN"].includes(x.toUpperCase())) return "";
+        return x;
+    };
+
+    /*
+     * DISTRICTS
+     *
+     * India:
+     *   NAME_2 = district
+     *
+     * USA:
+     *   NAME_1 = county
+     *
+     * IMPORTANT:
+     * These rules apply ONLY to district level.
+     * USA state files also contain description = USA.
+     */
+
+    if (level === "district") {
+
+        if (
+            valid(p.GID_2).startsWith("IND.") ||
+            valid(p.COUNTRY) === "India"
+        ) {
+            return (
+                valid(p.NAME_2_EN) ||
+                valid(p.NAME_2) ||
+                "Unknown"
+            );
+        }
+
+        if (
+            valid(p.GID_2) === "United States" ||
+            valid(p.description) === "USA"
+        ) {
+            return (
+                valid(p.NAME_1_EN) ||
+                valid(p.NAME_1) ||
+                "Unknown"
+            );
+        }
+    }
+
+    /*
+     * Normal country names.
+     */
+
+    if (level === "country") {
+        return (
+            valid(p.name) ||
+            valid(p.NAME) ||
+            valid(p.description) ||
+            valid(p.Name) ||
+            valid(p.ADMIN) ||
+            "Unknown"
+        );
+    }
+
+    /*
+     * Normal state names.
+     */
+
+    if (level === "state") {
+        return (
+            valid(p.GID_0) ||
+            valid(p.NAME_0_EN) ||
+            valid(p.NAME_0) ||
+            valid(p.NAME_1_EN) ||
+            valid(p.NAME_1) ||
+            valid(p.name) ||
+            valid(p.NAME) ||
+            "Unknown"
+        );
+    }
+
+    /*
+     * Other administrative levels.
+     */
+
+    return (
+        valid(p.NAME_5_EN) ||
+        valid(p.NAME_5) ||
+        valid(p.NAME_4_EN) ||
+        valid(p.NAME_4) ||
+        valid(p.NAME_3_EN) ||
+        valid(p.NAME_3) ||
+        valid(p.NAME_2_EN) ||
+        valid(p.NAME_2) ||
+        valid(p.NAME_1_EN) ||
+        valid(p.NAME_1) ||
+        valid(p.NAME_EN) ||
+        valid(p.NAME_ENG) ||
+        valid(p.NAME_ENGLISH) ||
+        valid(p.name_en) ||
+        valid(p.NAME) ||
+        valid(p.name) ||
+        valid(p.Name) ||
+        "Unknown"
+    );
+};
+
+
+MapApp.bindHoverName = function (feature, layer, level) {
+
+    const name =
+        MapApp.getFeatureName(feature, level);
+
+    if (name && name !== "Unknown") {
+
+        layer.bindTooltip(name, {
+            sticky: true,
+            direction: "top",
+            opacity: 0.95
+        });
+
+    }
+
+    layer.on("click", function (event) {
+
+        const el = this.getElement();
+
+        if (el) {
+            el.blur();
+        }
+
+        const baseStyle =
+            level === "country"
+                ? {
+                    color: "#333",
+                    weight: 1,
+                    fillColor: "#3388ff",
+                    fillOpacity: 0.08
+                }
+                : level === "state"
+                    ? {
+                        color: "#333",
+                        weight: 1,
+                        fillColor: "#44aa55",
+                        fillOpacity: 0.08
+                    }
+                    : {
+                        color: "#333",
+                        weight: 1,
+                        fillColor: "#ffaa44",
+                        fillOpacity: 0.08
+                    };
+
+        if (
+            event.originalEvent &&
+            event.originalEvent.shiftKey
+        ) {
+
+            this.setStyle(baseStyle);
+            this._mapSelected = false;
+
+            if (
+                MapControls &&
+                MapControls.removeSavedColor
+            ) {
+                MapControls.removeSavedColor(
+                    feature,
+                    level
+                );
+            }
+
+        } else {
+
+            const selectedStyle = {
+                color: "#111111",
+                weight: baseStyle.weight + 1,
+                fillColor: baseStyle.fillColor,
+                fillOpacity: 0.65
+            };
+
+            this.setStyle(selectedStyle);
+            this._mapSelected = true;
+
+            if (
+                MapControls &&
+                MapControls.rememberColor
+            ) {
+                MapControls.rememberColor(
+                    feature,
+                    level,
+                    selectedStyle
+                );
+            }
+
+        }
+
+        const info =
+            document.getElementById("infoName");
+
+        if (info && name) {
+            info.textContent = name;
+        }
+
+    });
+};
+
+MapApp.showCountry = async function () {
+
+    const savedView = MapApp.saveView();
+
+    MapApp.removeLayers();
+
+    try {
+
+        const data = await MapApp.loadAll("country");
+
+        MapApp.countryLayer = L.geoJSON(data, {
+
+            style: {
+                color: "#333",
+                weight: 1,
+                fillColor: "#3388ff",
+                fillOpacity: 0.08
+            },
+
+            onEachFeature: function(feature, layer) {
+                MapApp.bindHoverName(feature, layer, "country");
+            }
+
+        }).addTo(MapApp.map);
+
+        MapControls.restoreLayerColors(
+            MapApp.countryLayer,
+            "country"
+        );
+
+        MapApp.restoreView(savedView);
+
+    } catch (error) {
+        console.error("COUNTRY LOAD ERROR:", error);
+    }
+};
+
+MapApp.showStates = async function () {
+
+    const savedView = MapApp.saveView();
+
+    MapApp.removeLayers();
+
+    try {
+
+        const data = await MapApp.loadAll("state");
+
+        MapApp.stateLayer = L.geoJSON(data, {
+
+            style: {
+                color: "#333",
+                weight: 1,
+                fillColor: "#44aa55",
+                fillOpacity: 0.08
+            },
+
+            onEachFeature: function(feature, layer) {
+                MapApp.bindHoverName(feature, layer, "state");
+            }
+
+        }).addTo(MapApp.map);
+
+        MapControls.restoreLayerColors(
+            MapApp.stateLayer,
+            "state"
+        );
+
+        MapApp.restoreView(savedView);
+
+    } catch (error) {
+        console.error("STATE LOAD ERROR:", error);
+    }
+};
+
+MapApp.showDistricts = async function () {
+
+    const savedView = MapApp.saveView();
+
+    MapApp.removeLayers();
+
+    try {
+
+        const data = await MapApp.loadAll("district");
+
+        MapApp.districtLayer = L.geoJSON(data, {
+
+            style: {
+                color: "#333",
+                weight: 1,
+                fillColor: "#ffaa44",
+                fillOpacity: 0.08
+            },
+
+            onEachFeature: function(feature, layer) {
+                MapApp.bindHoverName(feature, layer, "district");
+            }
+
+        }).addTo(MapApp.map);
+
+        MapControls.restoreLayerColors(
+            MapApp.districtLayer,
+            "district"
+        );
+
+        MapApp.restoreView(savedView);
+
+    } catch (error) {
+        console.error("DISTRICT LOAD ERROR:", error);
+    }
+};
+
+
+/*
+ * ============================================================
+ * BACKGROUND PRELOAD
+ * ============================================================
+ *
+ * Country is shown first.
+ * Then States download.
+ * Then Districts download.
+ *
+ * None of these block the initial Country screen.
+ */
+
+MapApp.backgroundPreload = async function() {
+
+    /*
+     * Give the browser a moment to paint Country first.
+     */
+    await new Promise(function(resolve) {
+        setTimeout(resolve, 150);
+    });
+
+
+    try {
+
+        console.log(
+            "↓ Background preload: States"
+        );
+
+        await MapApp.loadAll("state");
+
+        console.log(
+            "✓ States ready"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "States background preload failed:",
+            error
+        );
+    }
+
+
+    /*
+     * Yield back to the browser before starting
+     * the much larger District dataset.
+     */
+    await new Promise(function(resolve) {
+
+        if (window.requestAnimationFrame) {
+            requestAnimationFrame(function() {
+                resolve();
+            });
+        } else {
+            setTimeout(resolve, 0);
+        }
+
+    });
+
+
+    try {
+
+        console.log(
+            "↓ Background preload: Districts"
+        );
+
+        await MapApp.loadAll(
+            "district"
+        );
+
+        console.log(
+            "✓ Districts ready"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "District background preload failed:",
+            error
+        );
+    }
+
+    console.log(
+        "✓ All background map data ready"
     );
 };
 
