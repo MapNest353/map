@@ -292,3 +292,50 @@ html, body {
 #infoName {
     display: none !important;
 }
+
+
+/* =========================================================
+   CLEAN MAP INFO + VERSION
+   ========================================================= */
+
+/* Small instruction only */
+#info {
+    position: absolute !important;
+    left: 10px !important;
+    bottom: 10px !important;
+    padding: 3px 7px !important;
+    margin: 0 !important;
+    background: rgba(255,255,255,0.55) !important;
+    border: none !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    color: #777 !important;
+    z-index: 2000 !important;
+    pointer-events: none !important;
+}
+
+/* NEVER show the country/region name */
+#infoName {
+    display: none !important;
+}
+
+/* Version/date display */
+#map-version {
+    position: absolute !important;
+    right: 10px !important;
+    bottom: 48px !important;
+    left: auto !important;
+    z-index: 2000 !important;
+    padding: 4px 7px !important;
+    margin: 0 !important;
+    background: rgba(255,255,255,0.65) !important;
+    border: none !important;
+    border-radius: 3px !important;
+    box-shadow: none !important;
+    font-size: 10px !important;
+    line-height: 13px !important;
+    color: #777 !important;
+    pointer-events: none !important;
+}
