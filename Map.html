@@ -428,6 +428,82 @@ body {
     </div>
 </div>
 
+
+<!-- MAPNEST INSIGHTS -->
+<button id="mapnest-insights-toggle" aria-label="Open MapNest Insights">
+    <span>◔</span>
+    <small>Insights</small>
+</button>
+
+<aside id="mapnest-insights" aria-hidden="true">
+
+    <div class="mn-insights-head">
+        <div>
+            <div class="mn-insights-eyebrow">MAPNEST</div>
+            <h2>Insights</h2>
+            <p id="mn-insights-project">My Map</p>
+        </div>
+
+        <button id="mn-insights-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="mn-insights-overview">
+
+        <div class="mn-stat-card mn-stat-wide">
+            <div class="mn-stat-top">
+                <span>Overall exploration</span>
+                <strong id="mn-total-percent">0%</strong>
+            </div>
+
+            <div class="mn-progress">
+                <i id="mn-total-progress"></i>
+            </div>
+
+            <div class="mn-stat-bottom">
+                <span id="mn-total-marked">0 marked</span>
+                <span id="mn-total-regions">0 regions</span>
+            </div>
+        </div>
+
+        <div class="mn-stat-card">
+            <div class="mn-stat-symbol">🌍</div>
+            <strong id="mn-country-count">0</strong>
+            <span>Countries</span>
+            <small id="mn-country-percent">0%</small>
+        </div>
+
+        <div class="mn-stat-card">
+            <div class="mn-stat-symbol">◈</div>
+            <strong id="mn-state-count">0</strong>
+            <span>States</span>
+            <small id="mn-state-percent">0%</small>
+        </div>
+
+        <div class="mn-stat-card">
+            <div class="mn-stat-symbol">◇</div>
+            <strong id="mn-district-count">0</strong>
+            <span>Districts</span>
+            <small id="mn-district-percent">0%</small>
+        </div>
+
+    </div>
+
+    <div class="mn-insights-section">
+        <div class="mn-section-title">
+            <span>Marked regions</span>
+            <span id="mn-marked-total">0</span>
+        </div>
+
+        <div class="mn-region-tabs">
+            <button class="active" data-insight-level="country">Countries</button>
+            <button data-insight-level="state">States</button>
+            <button data-insight-level="district">Districts</button>
+        </div>
+
+        <div id="mn-region-list"></div>
+    </div>
+
+</aside>
 <div id="map"></div>
 
 <div id="map-version"></div>
@@ -850,6 +926,289 @@ body {
         "click",
         dismissWelcome
     );
+
+})();
+</script>
+
+<script>
+(function () {
+
+    const panel = document.getElementById("mapnest-insights");
+    const toggle = document.getElementById("mapnest-insights-toggle");
+    const close = document.getElementById("mn-insights-close");
+
+    if (!panel || !toggle) return;
+
+    let activeLevel = "country";
+
+    function layerFor(level) {
+        if (!window.MapApp) return null;
+
+        if (level === "country") return MapApp.countryLayer;
+        if (level === "state") return MapApp.stateLayer;
+        if (level === "district") return MapApp.districtLayer;
+
+        return null;
+    }
+
+    function featureName(item) {
+
+        if (!item || !item.feature)
+            return "Unnamed region";
+
+        const p = item.feature.properties || {};
+
+        return (
+            p.name ||
+            p.NAME ||
+            p.NAME_0 ||
+            p.NAME_1 ||
+            p.NAME_2 ||
+            p.admin ||
+            p.ADMIN ||
+            p.country ||
+            p.state ||
+            p.district ||
+            "Unnamed region"
+        );
+    }
+
+    function stats(level) {
+
+        const layer = layerFor(level);
+
+        if (!layer || typeof layer.getLayers !== "function")
+            return { total: 0, marked: 0, names: [] };
+
+        const layers = layer.getLayers();
+
+        const names = [];
+
+        layers.forEach(function (item) {
+
+            if (item._mapSelected) {
+                names.push(featureName(item));
+            }
+
+        });
+
+        names.sort(function (a, b) {
+            return a.localeCompare(b);
+        });
+
+        return {
+            total: layers.length,
+            marked: names.length,
+            names: names
+        };
+    }
+
+    function percent(marked, total) {
+
+        if (!total) return 0;
+
+        return Math.round(
+            (marked / total) * 1000
+        ) / 10;
+    }
+
+    function update() {
+
+        const c = stats("country");
+        const s = stats("state");
+        const d = stats("district");
+
+        const totalMarked =
+            c.marked + s.marked + d.marked;
+
+        const totalRegions =
+            c.total + s.total + d.total;
+
+        const overall =
+            percent(totalMarked, totalRegions);
+
+        const project =
+            window.MapControls &&
+            typeof MapControls.getActiveProject === "function"
+                ? MapControls.getActiveProject()
+                : "My Map";
+
+        document.getElementById(
+            "mn-insights-project"
+        ).textContent = project;
+
+        document.getElementById(
+            "mn-country-count"
+        ).textContent = c.marked;
+
+        document.getElementById(
+            "mn-state-count"
+        ).textContent = s.marked;
+
+        document.getElementById(
+            "mn-district-count"
+        ).textContent = d.marked;
+
+        document.getElementById(
+            "mn-country-percent"
+        ).textContent =
+            percent(c.marked, c.total) + "%";
+
+        document.getElementById(
+            "mn-state-percent"
+        ).textContent =
+            percent(s.marked, s.total) + "%";
+
+        document.getElementById(
+            "mn-district-percent"
+        ).textContent =
+            percent(d.marked, d.total) + "%";
+
+        document.getElementById(
+            "mn-total-percent"
+        ).textContent =
+            overall + "%";
+
+        document.getElementById(
+            "mn-total-marked"
+        ).textContent =
+            totalMarked + " marked";
+
+        document.getElementById(
+            "mn-total-regions"
+        ).textContent =
+            totalRegions + " regions";
+
+        document.getElementById(
+            "mn-total-progress"
+        ).style.width =
+            Math.min(overall, 100) + "%";
+
+        renderList();
+    }
+
+    function renderList() {
+
+        const result = stats(activeLevel);
+
+        const list =
+            document.getElementById(
+                "mn-region-list"
+            );
+
+        const counter =
+            document.getElementById(
+                "mn-marked-total"
+            );
+
+        counter.textContent = result.marked;
+
+        if (!result.names.length) {
+
+            list.innerHTML = `
+                <div class="mn-empty">
+                    <div class="mn-empty-icon">◌</div>
+                    <strong>Nothing marked yet</strong>
+                    <span>Mark regions on the map and they'll appear here.</span>
+                </div>
+            `;
+
+            return;
+        }
+
+        list.innerHTML = result.names.map(function (name) {
+
+            return `
+                <div class="mn-region-row">
+                    <span class="mn-region-dot"></span>
+                    <span>${escapeHtml(name)}</span>
+                </div>
+            `;
+
+        }).join("");
+    }
+
+    function escapeHtml(value) {
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    toggle.addEventListener("click", function () {
+
+        panel.classList.add("open");
+        panel.setAttribute("aria-hidden", "false");
+
+        update();
+    });
+
+    close.addEventListener("click", function () {
+
+        panel.classList.remove("open");
+        panel.setAttribute("aria-hidden", "true");
+    });
+
+    document.querySelectorAll(
+        "[data-insight-level]"
+    ).forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            document.querySelectorAll(
+                "[data-insight-level]"
+            ).forEach(function (b) {
+                b.classList.remove("active");
+            });
+
+            button.classList.add("active");
+
+            activeLevel =
+                button.dataset.insightLevel;
+
+            renderList();
+        });
+    });
+
+    /*
+     * Update automatically whenever the map changes.
+     */
+    const originalHandleClick =
+        window.MapControls &&
+        MapControls.handleClick;
+
+    if (originalHandleClick) {
+
+        MapControls.handleClick = function () {
+
+            const result =
+                originalHandleClick.apply(
+                    this,
+                    arguments
+                );
+
+            setTimeout(update, 20);
+
+            return result;
+        };
+    }
+
+    window.MapNestInsights = {
+        update: update
+    };
+
+    /*
+     * Keep the panel synchronized with project changes.
+     */
+    setInterval(function () {
+
+        if (panel.classList.contains("open"))
+            update();
+
+    }, 700);
 
 })();
 </script>
