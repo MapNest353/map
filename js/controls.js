@@ -225,32 +225,41 @@ MapControls.createProjectSelector = function() {
 
     add.onclick = function() {
 
-        const name =
-            prompt("Project name:");
+        MapNestModal.prompt(
+            "New workspace",
+            "Choose a name for your new map workspace.",
+            ""
+        ).then(function(name) {
 
-        if (!name || !name.trim())
-            return;
+            if (!name || !name.trim())
+                return;
 
-        const clean = name.trim();
+            const clean = name.trim();
 
-        const projects =
-            MapControls.getProjects();
+            const projects =
+                MapControls.getProjects();
 
-        if (projects[clean]) {
-            alert("A project with that name already exists.");
-            return;
-        }
+            if (projects[clean]) {
 
-        projects[clean] = {};
+                MapNestModal.alert(
+                    "Workspace already exists",
+                    "A workspace with that name already exists."
+                );
 
-        localStorage.setItem(
-            MapControls.projectsKey,
-            JSON.stringify(projects)
-        );
+                return;
+            }
 
-        MapControls.setActiveProject(clean);
+            projects[clean] = {};
 
-        location.reload();
+            localStorage.setItem(
+                MapControls.projectsKey,
+                JSON.stringify(projects)
+            );
+
+            MapControls.setActiveProject(clean);
+
+            location.reload();
+        });
     };
 
     box.appendChild(select);
@@ -500,9 +509,16 @@ MapControls.createExportControls = function() {
     reset.textContent = "Reset";
 
     reset.onclick = function() {
-        if (confirm("Reset all saved colors?")) {
-            MapControls.resetColors();
-        }
+        MapNestModal.confirm(
+            "Reset markings?",
+            "This will remove the saved markings from this workspace.",
+            "Reset"
+        ).then(function(ok) {
+
+            if (ok)
+                MapControls.resetColors();
+
+        });
     };
 
     reset.style.padding = "7px 11px";

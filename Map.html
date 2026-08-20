@@ -163,6 +163,229 @@ body {
 </div>
 
 <!-- MAPNEST WELCOME -->
+
+<!-- MAPNEST CUSTOM DIALOG SYSTEM -->
+<div id="mapnest-modal-root" aria-hidden="true">
+    <div id="mapnest-modal-backdrop"></div>
+
+    <div id="mapnest-modal" role="dialog" aria-modal="true">
+
+        <div id="mapnest-modal-icon">✦</div>
+
+        <div id="mapnest-modal-title"></div>
+        <div id="mapnest-modal-message"></div>
+
+        <input
+            id="mapnest-modal-input"
+            type="text"
+            autocomplete="off"
+        >
+
+        <div id="mapnest-modal-actions">
+            <button id="mapnest-modal-cancel">
+                Cancel
+            </button>
+
+            <button id="mapnest-modal-confirm">
+                Confirm
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+(function () {
+
+    const root =
+        document.getElementById("mapnest-modal-root");
+
+    const title =
+        document.getElementById("mapnest-modal-title");
+
+    const message =
+        document.getElementById("mapnest-modal-message");
+
+    const input =
+        document.getElementById("mapnest-modal-input");
+
+    const cancel =
+        document.getElementById("mapnest-modal-cancel");
+
+    const confirm =
+        document.getElementById("mapnest-modal-confirm");
+
+    let resolver = null;
+
+    function close(value) {
+
+        root.classList.remove("open");
+        root.setAttribute("aria-hidden", "true");
+
+        const r = resolver;
+        resolver = null;
+
+        if (r) r(value);
+    }
+
+    function open(type, heading, text, confirmText, value) {
+
+        title.textContent = heading;
+        message.textContent = text || "";
+
+        confirm.textContent =
+            confirmText || "Confirm";
+
+        input.value = value || "";
+
+        input.style.display =
+            type === "prompt" ? "block" : "none";
+
+        cancel.style.display = "block";
+
+        root.classList.add("open");
+        root.setAttribute("aria-hidden", "false");
+
+        setTimeout(function () {
+
+            if (type === "prompt")
+                input.focus();
+            else
+                confirm.focus();
+
+        }, 160);
+    }
+
+    window.MapNestModal = {
+
+        confirm: function (
+            heading,
+            text,
+            confirmText
+        ) {
+
+            return new Promise(function (resolve) {
+
+                resolver = resolve;
+
+                open(
+                    "confirm",
+                    heading,
+                    text,
+                    confirmText
+                );
+
+            });
+
+        },
+
+        prompt: function (
+            heading,
+            text,
+            defaultValue
+        ) {
+
+            return new Promise(function (resolve) {
+
+                resolver = function (value) {
+                    resolve(value);
+                };
+
+                open(
+                    "prompt",
+                    heading,
+                    text,
+                    "Create",
+                    defaultValue || ""
+                );
+
+            });
+
+        },
+
+        alert: function (
+            heading,
+            text
+        ) {
+
+            return new Promise(function (resolve) {
+
+                resolver = resolve;
+
+                cancel.style.display = "none";
+
+                open(
+                    "alert",
+                    heading,
+                    text,
+                    "OK"
+                );
+
+            });
+
+        }
+
+    };
+
+    confirm.addEventListener(
+        "click",
+        function () {
+
+            if (input.style.display !== "none") {
+                const value =
+                    input.value.trim();
+
+                close(value || null);
+            } else {
+                close(true);
+            }
+
+        }
+    );
+
+    cancel.addEventListener(
+        "click",
+        function () {
+            close(false);
+        }
+    );
+
+    document.getElementById(
+        "mapnest-modal-backdrop"
+    ).addEventListener(
+        "click",
+        function () {
+            close(false);
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (!root.classList.contains("open"))
+                return;
+
+            if (event.key === "Escape") {
+                event.preventDefault();
+                close(false);
+            }
+
+            if (
+                event.key === "Enter" &&
+                input.style.display !== "none" &&
+                document.activeElement === input
+            ) {
+                event.preventDefault();
+                confirm.click();
+            }
+
+        }
+    );
+
+})();
+</script>
+
 <div id="mapnest-welcome">
     <div class="mapnest-welcome-card">
 
@@ -467,8 +690,16 @@ body {
         if (window.MapControls &&
             typeof MapControls.resetColors === "function") {
 
-            if (confirm("Reset markings in this project?"))
-                MapControls.resetColors();
+            MapNestModal.confirm(
+                "Reset markings?",
+                "This will remove the saved markings from this workspace.",
+                "Reset"
+            ).then(function(ok) {
+
+                if (ok)
+                    MapControls.resetColors();
+
+            });
         }
     });
 
