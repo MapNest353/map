@@ -93,7 +93,177 @@ MapControls.nextLevel = function() {
    PERSISTENT COLORS
    ========================================================= */
 
-MapControls.storageKey = "map_saved_colors_v1";
+/* =========================================================
+   PROJECT SYSTEM
+   ========================================================= */
+
+MapControls.projectsKey = "mapnest_projects_v1";
+MapControls.activeProjectKey = "mapnest_active_project";
+MapControls.defaultProject = "Countries I Visited";
+
+MapControls.getProjects = function() {
+    try {
+        return JSON.parse(
+            localStorage.getItem(MapControls.projectsKey) || "{}"
+        );
+    } catch (error) {
+        return {};
+    }
+};
+
+MapControls.getActiveProject = function() {
+    return localStorage.getItem(
+        MapControls.activeProjectKey
+    ) || MapControls.defaultProject;
+};
+
+MapControls.setActiveProject = function(name) {
+    localStorage.setItem(
+        MapControls.activeProjectKey,
+        name
+    );
+};
+
+(function initializeProjects() {
+    const projects = MapControls.getProjects();
+    const oldData = localStorage.getItem("map_saved_colors_v1");
+
+    if (!projects[MapControls.defaultProject]) {
+        try {
+            projects[MapControls.defaultProject] =
+                oldData ? JSON.parse(oldData) : {};
+        } catch (error) {
+            projects[MapControls.defaultProject] = {};
+        }
+    }
+
+    localStorage.setItem(
+        MapControls.projectsKey,
+        JSON.stringify(projects)
+    );
+})();
+
+MapControls.storageKey =
+    "mapnest_project_" +
+    encodeURIComponent(
+        MapControls.getActiveProject()
+    );
+
+/* =========================================================
+   PROJECT SELECTOR
+   ========================================================= */
+
+MapControls.createProjectSelector = function() {
+
+    if (document.getElementById("mapnest-project-selector"))
+        return;
+
+    const box = document.createElement("div");
+
+    box.id = "mapnest-project-selector";
+    box.style.cssText =
+        "position:fixed;" +
+        "top:195px;" +
+        "right:20px;" +
+        "z-index:99999;" +
+        "background:white;" +
+        "padding:7px;" +
+        "border-radius:6px;" +
+        "box-shadow:0 1px 5px rgba(0,0,0,.3);";
+
+    const select = document.createElement("select");
+
+    select.style.cssText =
+        "padding:5px;";
+
+    function refresh() {
+
+        const projects =
+            MapControls.getProjects();
+
+        const active =
+            MapControls.getActiveProject();
+
+        select.innerHTML = "";
+
+        Object.keys(projects).forEach(function(name) {
+
+            const option =
+                document.createElement("option");
+
+            option.value = name;
+            option.textContent = name;
+            option.selected = name === active;
+
+            select.appendChild(option);
+        });
+    }
+
+    select.onchange = function() {
+
+        MapControls.setActiveProject(
+            this.value
+        );
+
+        location.reload();
+    };
+
+    const add =
+        document.createElement("button");
+
+    add.textContent = "+";
+    add.title = "New project";
+    add.style.marginLeft = "6px";
+
+    add.onclick = function() {
+
+        const name =
+            prompt("Project name:");
+
+        if (!name || !name.trim())
+            return;
+
+        const clean = name.trim();
+
+        const projects =
+            MapControls.getProjects();
+
+        if (projects[clean]) {
+            alert("A project with that name already exists.");
+            return;
+        }
+
+        projects[clean] = {};
+
+        localStorage.setItem(
+            MapControls.projectsKey,
+            JSON.stringify(projects)
+        );
+
+        MapControls.setActiveProject(clean);
+
+        location.reload();
+    };
+
+    box.appendChild(select);
+    box.appendChild(add);
+
+    document.body.appendChild(box);
+
+    refresh();
+};
+
+MapControls.createProjectSelector();
+
+/* =========================================================
+   PROJECT-SPECIFIC SAVED COLORS
+   ========================================================= */
+
+MapControls.storageKey =
+    "mapnest_project_" +
+    encodeURIComponent(
+        MapControls.getActiveProject()
+    );
 
 MapControls.getFeatureKey = function(feature, level) {
 
