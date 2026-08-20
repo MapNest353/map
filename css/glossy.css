@@ -2259,3 +2259,195 @@ body::after {
     }
 
 }
+
+/* =========================================================
+   MAPNEST — HIDE APP CONTROLS DURING WELCOME
+   ========================================================= */
+
+/*
+ * The welcome screen keeps the map beautifully blurred,
+ * but application controls should not show through it.
+ */
+
+body:has(#mapnest-welcome) .mapnest-command-center,
+body:has(#mapnest-welcome) .map-export-controls,
+body:has(#mapnest-welcome) #mapnest-style-control,
+body:has(#mapnest-welcome) .leaflet-control-zoom,
+body:has(#mapnest-welcome) #insights-orb,
+body:has(#mapnest-welcome) #insights-panel {
+
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+
+/*
+ * Keep the welcome backdrop itself visible.
+ * The map remains softly blurred underneath.
+ */
+
+#mapnest-welcome {
+    z-index: 100000 !important;
+}
+
+
+
+/* =========================================================
+   MAPNEST — BRAND IDENTITY
+   ========================================================= */
+
+.mn-brand {
+
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    padding:
+        0 5px 0 3px;
+
+    user-select: none;
+}
+
+
+.mn-brand-logo {
+
+    width: 29px;
+    height: 29px;
+
+    display: block;
+
+    filter:
+        drop-shadow(
+            0 3px 6px
+            rgba(22,119,255,.20)
+        );
+
+    transition:
+        transform .25s cubic-bezier(.2,.8,.2,1),
+        filter .25s ease;
+}
+
+
+.mn-brand:hover
+.mn-brand-logo {
+
+    transform:
+        rotate(-5deg)
+        scale(1.07);
+
+    filter:
+        drop-shadow(
+            0 5px 10px
+            rgba(22,119,255,.28)
+        );
+}
+
+
+.mn-brand-name {
+
+    font-size: 12px;
+
+    font-weight: 800;
+
+    letter-spacing:
+        -.035em;
+
+    color:
+        #172033;
+}
+
+
+/* ---------------------------------------------------------
+   WELCOME LOGO
+   --------------------------------------------------------- */
+
+.mapnest-welcome-logo {
+
+    width: 68px;
+    height: 68px;
+
+    display: block;
+
+    margin:
+        0 auto 17px;
+
+    filter:
+        drop-shadow(
+            0 12px 22px
+            rgba(22,119,255,.22)
+        );
+
+    animation:
+        mapnestLogoEntrance
+        .65s cubic-bezier(.2,.8,.2,1);
+}
+
+
+@keyframes mapnestLogoEntrance {
+
+    from {
+        opacity: 0;
+        transform:
+            translateY(8px)
+            scale(.82)
+            rotate(-8deg);
+    }
+
+    65% {
+        transform:
+            translateY(-2px)
+            scale(1.035)
+            rotate(1deg);
+    }
+
+    to {
+        opacity: 1;
+        transform:
+            translateY(0)
+            scale(1)
+            rotate(0);
+    }
+}
+
+
+/* ---------------------------------------------------------
+   VINTAGE MODE — BRAND STAYS MODERN
+   --------------------------------------------------------- */
+
+#map.mapnest-vintage ~ .mapnest-command-center
+.mn-brand-logo {
+
+    filter:
+        drop-shadow(
+            0 3px 6px
+            rgba(22,119,255,.20)
+        );
+}
+
+
+/* ---------------------------------------------------------
+   MOBILE
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .mn-brand-name {
+        display: none;
+    }
+
+    .mn-brand {
+        padding:
+            0 2px;
+    }
+
+    .mn-brand-logo {
+        width: 27px;
+        height: 27px;
+    }
+
+}
+

@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <linearGradient id="g" x1="15" y1="10" x2="82" y2="88">
+      <stop offset="0" stop-color="#67a8ff"/>
+      <stop offset=".48" stop-color="#1677ff"/>
+      <stop offset="1" stop-color="#0756c9"/>
+    </linearGradient>
+
+    <linearGradient id="glass" x1="20" y1="12" x2="76" y2="80">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#dcecff" stop-opacity=".45"/>
+    </linearGradient>
+  </defs>
+
+  <!-- outer compass/globe -->
+  <circle
+    cx="48"
+    cy="48"
+    r="39"
+    fill="url(#glass)"
+    stroke="url(#g)"
+    stroke-width="4"
+  />
+
+  <!-- subtle longitude -->
+  <ellipse
+    cx="48"
+    cy="48"
+    rx="18"
+    ry="37"
+    fill="none"
+    stroke="#1677ff"
+    stroke-opacity=".22"
+    stroke-width="2"
+  />
+
+  <!-- subtle latitude -->
+  <ellipse
+    cx="48"
+    cy="48"
+    rx="37"
+    ry="15"
+    fill="none"
+    stroke="#1677ff"
+    stroke-opacity=".22"
+    stroke-width="2"
+  />
+
+  <!-- map / nest shape -->
+  <path
+    d="M27 55
+       C31 49 36 47 41 50
+       C45 52 48 56 53 55
+       C59 54 61 46 67 43
+       C70 42 73 43 76 46
+       L76 61
+       C70 65 65 67 59 65
+       C53 63 49 68 43 67
+       C37 66 32 61 27 61Z"
+    fill="url(#g)"
+    fill-opacity=".92"
+  />
+
+  <!-- location point -->
+  <path
+    d="M48 22
+       C39 22 33 29 33 37
+       C33 48 48 61 48 61
+       C48 61 63 48 63 37
+       C63 29 57 22 48 22Z"
+    fill="#ffffff"
+    fill-opacity=".94"
+    stroke="#1677ff"
+    stroke-width="3"
+  />
+
+  <circle
+    cx="48"
+    cy="37"
+    r="6"
+    fill="url(#g)"
+  />
+
+  <!-- tiny compass highlight -->
+  <path
+    d="M48 9 L51 17 L48 15 L45 17Z"
+    fill="#1677ff"
+    fill-opacity=".65"
+  />
+</svg>
