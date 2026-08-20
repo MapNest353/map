@@ -355,7 +355,7 @@ MapApp.loadAll = async function(type) {
             throw new Error("Unknown map type: " + type);
         }
 
-        const cacheKey = "global-v3|" + type;
+        const cacheKey = "global-v6|" + type;
 
         const cached =
             await MapApp.getCachedData(cacheKey);
@@ -372,7 +372,7 @@ MapApp.loadAll = async function(type) {
         console.log("↓ Loading global " + type + " data...");
 
         const response = await fetch(
-            "data/global/" + file + ".json?v=3",
+            "data/global/" + file + ".json?v=6",
             { cache: "default" }
         );
 
@@ -472,113 +472,9 @@ MapApp.preloadMapData = async function() {
 
 
 MapApp.getFeatureName = function(feature, level) {
-
-    const p = feature.properties || {};
-
-    const valid = value => {
-        if (value === undefined || value === null) return "";
-        const x = String(value).trim();
-        if (!x) return "";
-        if (["NA", "NULL", "UNKNOWN"].includes(x.toUpperCase())) return "";
-        return x;
-    };
-
-    /*
-     * DISTRICTS
-     *
-     * India:
-     *   NAME_2 = district
-     *
-     * USA:
-     *   NAME_1 = county
-     *
-     * IMPORTANT:
-     * These rules apply ONLY to district level.
-     * USA state files also contain description = USA.
-     */
-
-    if (level === "district") {
-
-        if (
-            valid(p.GID_2).startsWith("IND.") ||
-            valid(p.COUNTRY) === "India"
-        ) {
-            return (
-                valid(p.NAME_2_EN) ||
-                valid(p.NAME_2) ||
-                "Unknown"
-            );
-        }
-
-        if (
-            valid(p.GID_2) === "United States" ||
-            valid(p.description) === "USA"
-        ) {
-            return (
-                valid(p.NAME_1_EN) ||
-                valid(p.NAME_1) ||
-                "Unknown"
-            );
-        }
-    }
-
-    /*
-     * Normal country names.
-     */
-
-    if (level === "country") {
-        return (
-            valid(p.name) ||
-            valid(p.NAME) ||
-            valid(p.description) ||
-            valid(p.Name) ||
-            valid(p.ADMIN) ||
-            "Unknown"
-        );
-    }
-
-    /*
-     * Normal state names.
-     */
-
-    if (level === "state") {
-        return (
-            valid(p.GID_0) ||
-            valid(p.NAME_0_EN) ||
-            valid(p.NAME_0) ||
-            valid(p.NAME_1_EN) ||
-            valid(p.NAME_1) ||
-            valid(p.name) ||
-            valid(p.NAME) ||
-            "Unknown"
-        );
-    }
-
-    /*
-     * Other administrative levels.
-     */
-
-    return (
-        valid(p.NAME_5_EN) ||
-        valid(p.NAME_5) ||
-        valid(p.NAME_4_EN) ||
-        valid(p.NAME_4) ||
-        valid(p.NAME_3_EN) ||
-        valid(p.NAME_3) ||
-        valid(p.NAME_2_EN) ||
-        valid(p.NAME_2) ||
-        valid(p.NAME_1_EN) ||
-        valid(p.NAME_1) ||
-        valid(p.NAME_EN) ||
-        valid(p.NAME_ENG) ||
-        valid(p.NAME_ENGLISH) ||
-        valid(p.name_en) ||
-        valid(p.NAME) ||
-        valid(p.name) ||
-        valid(p.Name) ||
-        "Unknown"
-    );
-};
+    const properties = feature.properties || {};
+    return properties.name_en || "Unknown";
+};;
 
 
 MapApp.bindHoverName = function (feature, layer, level) {
