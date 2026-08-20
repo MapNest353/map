@@ -1422,67 +1422,245 @@ body::after {
 
 
 /* =========================================================
-   MAPNEST — INSIGHTS
+   MAPNEST — INSIGHTS HALO
    ========================================================= */
 
 #mapnest-insights-toggle {
     position: fixed;
 
-    left: 20px;
-    bottom: 22px;
+    right: 22px;
+    bottom: 76px;
+    left: auto;
 
-    z-index: 3500;
+    z-index: 5000;
 
-    height: 43px;
+    width: 54px;
+    height: 54px;
 
-    padding: 0 15px;
+    padding: 0;
 
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
 
-    border: 1px solid rgba(255,255,255,.84);
-    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.9);
+    border-radius: 50%;
 
     background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,.82),
-            rgba(238,244,250,.70)
+        radial-gradient(
+            circle at 35% 30%,
+            rgba(255,255,255,.98),
+            rgba(231,240,251,.82) 55%,
+            rgba(207,224,243,.72)
         );
 
-    backdrop-filter: blur(22px) saturate(175%);
-    -webkit-backdrop-filter: blur(22px) saturate(175%);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
 
-    color: #273449;
-
-    font-size: 12px;
-    font-weight: 700;
+    color: #1677ff;
 
     cursor: pointer;
 
     box-shadow:
-        0 12px 34px rgba(15,23,42,.14),
-        inset 0 1px 0 white;
+        0 12px 35px rgba(15,23,42,.18),
+        0 0 0 1px rgba(255,255,255,.35),
+        inset 0 2px 4px rgba(255,255,255,.95),
+        inset 0 -3px 8px rgba(80,120,160,.08);
 
     transition:
-        transform .18s ease,
-        box-shadow .18s ease;
-}
-
-#mapnest-insights-toggle span {
-    color: #1677ff;
-    font-size: 19px;
+        transform .25s cubic-bezier(.16,1,.3,1),
+        box-shadow .25s ease;
 }
 
 #mapnest-insights-toggle:hover {
-    transform: translateY(-2px);
+    transform: scale(1.08);
 
     box-shadow:
-        0 16px 40px rgba(15,23,42,.18),
-        0 0 18px rgba(22,119,255,.08),
-        inset 0 1px 0 white;
+        0 16px 42px rgba(15,23,42,.22),
+        0 0 26px rgba(22,119,255,.18),
+        inset 0 2px 4px rgba(255,255,255,.95);
 }
+
+.mn-insights-orb-core {
+    position: relative;
+    z-index: 3;
+
+    font-size: 23px;
+
+    line-height: 1;
+
+    text-shadow:
+        0 2px 8px rgba(22,119,255,.18);
+}
+
+.mn-insights-orb-ring {
+    position: absolute;
+    inset: -7px;
+
+    border-radius: 50%;
+
+    border: 1px solid rgba(22,119,255,.10);
+
+    opacity: .7;
+
+    pointer-events: none;
+}
+
+.mn-insights-orb-ring::after {
+    content: "";
+
+    position: absolute;
+    inset: 3px;
+
+    border-radius: inherit;
+
+    border: 1px solid rgba(255,255,255,.75);
+}
+
+#mapnest-insights-toggle small {
+    position: absolute;
+
+    right: 65px;
+
+    padding: 6px 9px;
+
+    border: 1px solid rgba(255,255,255,.75);
+    border-radius: 8px;
+
+    background: rgba(20,28,42,.88);
+
+    color: white;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    opacity: 0;
+    pointer-events: none;
+
+    transform:
+        translateX(5px);
+
+    transition:
+        opacity .16s ease,
+        transform .16s ease;
+}
+
+#mapnest-insights-toggle:hover small {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Initial attention pulse */
+#mapnest-insights-toggle {
+    opacity: 0;
+    visibility: hidden;
+
+    transform:
+        translateY(24px)
+        scale(.72);
+}
+
+#mapnest-insights-toggle.revealed {
+    visibility: visible;
+
+    animation:
+        insightsOrbReveal .72s cubic-bezier(.16,1,.3,1) forwards;
+}
+
+#mapnest-insights-toggle.intro {
+    animation:
+        insightsHaloIntro 1.8s cubic-bezier(.16,1,.3,1);
+}
+
+#mapnest-insights-toggle.intro::before,
+#mapnest-insights-toggle.intro::after {
+    content: "";
+
+    position: absolute;
+    inset: -2px;
+
+    border-radius: 50%;
+
+    border: 1px solid rgba(22,119,255,.25);
+
+    animation:
+        insightsHaloWave 1.8s ease-out;
+}
+
+#mapnest-insights-toggle.intro::after {
+    animation-delay: .25s;
+}
+
+@keyframes insightsOrbReveal {
+
+    0% {
+        opacity: 0;
+        transform:
+            translateY(24px)
+            scale(.72);
+    }
+
+    55% {
+        opacity: 1;
+        transform:
+            translateY(-3px)
+            scale(1.04);
+    }
+
+    78% {
+        transform:
+            translateY(1px)
+            scale(.98);
+    }
+
+    100% {
+        opacity: 1;
+        transform:
+            translateY(0)
+            scale(1);
+    }
+
+}
+
+@keyframes insightsHaloIntro {
+
+    0%, 100% {
+        transform: scale(1);
+    }
+
+    20% {
+        transform: scale(1.12);
+    }
+
+    38% {
+        transform: scale(.98);
+    }
+
+    55% {
+        transform: scale(1.05);
+    }
+
+}
+
+@keyframes insightsHaloWave {
+
+    0% {
+        opacity: .65;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(1.65);
+    }
+
+}
+
+/* =========================================================
+   INSIGHTS PANEL
+   ========================================================= */
 
 #mapnest-insights {
     position: fixed;
@@ -1524,13 +1702,15 @@ body::after {
     pointer-events: none;
 
     transform:
-        translateX(24px)
-        scale(.98);
+        translateX(65px)
+        scale(.94);
+
+    transform-origin: bottom right;
 
     transition:
         opacity .22s ease,
-        transform .3s cubic-bezier(.16,1,.3,1),
-        visibility 0s linear .3s;
+        transform .34s cubic-bezier(.16,1,.3,1),
+        visibility 0s linear .34s;
 }
 
 #mapnest-insights.open {
@@ -1543,44 +1723,40 @@ body::after {
         scale(1);
 
     transition:
-        opacity .22s ease,
-        transform .3s cubic-bezier(.16,1,.3,1),
+        opacity .20s ease,
+        transform .34s cubic-bezier(.16,1,.3,1),
         visibility 0s;
 }
+
+/* =========================================================
+   EXISTING INSIGHTS CONTENT
+   ========================================================= */
 
 .mn-insights-head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-
     margin-bottom: 20px;
 }
 
 .mn-insights-eyebrow {
     color: #1677ff;
-
     font-size: 9px;
     font-weight: 800;
-
     letter-spacing: .14em;
 }
 
 .mn-insights-head h2 {
     margin: 3px 0 0;
-
     color: #172033;
-
     font-size: 25px;
     line-height: 1;
-
     letter-spacing: -.035em;
 }
 
 .mn-insights-head p {
     margin: 7px 0 0;
-
     color: rgba(23,32,51,.50);
-
     font-size: 11px;
     font-weight: 600;
 }
@@ -1588,55 +1764,32 @@ body::after {
 #mn-insights-close {
     width: 32px;
     height: 32px;
-
     border: 0;
     border-radius: 10px;
-
     background: rgba(255,255,255,.55);
-
     color: #536174;
-
     font-size: 21px;
-
     cursor: pointer;
-
-    transition:
-        background .15s ease,
-        transform .15s ease;
-}
-
-#mn-insights-close:hover {
-    background: rgba(255,255,255,.9);
-    transform: scale(1.05);
 }
 
 .mn-insights-overview {
     display: grid;
-
     grid-template-columns: repeat(2,1fr);
-
     gap: 9px;
 }
 
 .mn-stat-card {
     min-height: 105px;
-
     box-sizing: border-box;
-
     padding: 14px;
-
     border: 1px solid rgba(255,255,255,.78);
     border-radius: 16px;
-
     background: rgba(255,255,255,.43);
-
-    box-shadow:
-        inset 0 1px 0 rgba(255,255,255,.8);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
 }
 
 .mn-stat-wide {
     grid-column: 1 / -1;
-
     min-height: 84px;
 }
 
@@ -1644,9 +1797,7 @@ body::after {
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     color: #516075;
-
     font-size: 11px;
     font-weight: 650;
 }
@@ -1658,42 +1809,26 @@ body::after {
 
 .mn-progress {
     height: 6px;
-
     margin-top: 12px;
-
     overflow: hidden;
-
     border-radius: 10px;
-
     background: rgba(23,32,51,.08);
 }
 
 .mn-progress i {
     display: block;
-
     width: 0;
     height: 100%;
-
     border-radius: inherit;
-
-    background:
-        linear-gradient(
-            90deg,
-            #1677ff,
-            #65a7ff
-        );
-
+    background: linear-gradient(90deg,#1677ff,#65a7ff);
     transition: width .45s cubic-bezier(.16,1,.3,1);
 }
 
 .mn-stat-bottom {
     display: flex;
     justify-content: space-between;
-
     margin-top: 8px;
-
     color: rgba(23,32,51,.43);
-
     font-size: 10px;
 }
 
@@ -1704,31 +1839,23 @@ body::after {
 
 .mn-stat-card strong {
     display: block;
-
     color: #172033;
-
     font-size: 22px;
     line-height: 1;
 }
 
 .mn-stat-card > span {
     display: block;
-
     margin-top: 5px;
-
     color: #536174;
-
     font-size: 11px;
     font-weight: 650;
 }
 
 .mn-stat-card small {
     display: block;
-
     margin-top: 5px;
-
     color: #1677ff;
-
     font-size: 10px;
     font-weight: 700;
 }
@@ -1740,11 +1867,8 @@ body::after {
 .mn-section-title {
     display: flex;
     justify-content: space-between;
-
     margin-bottom: 10px;
-
     color: #263449;
-
     font-size: 12px;
     font-weight: 750;
 }
@@ -1755,51 +1879,32 @@ body::after {
 
 .mn-region-tabs {
     display: flex;
-
     padding: 4px;
-
     margin-bottom: 9px;
-
     border-radius: 12px;
-
     background: rgba(15,23,42,.055);
 }
 
 .mn-region-tabs button {
     flex: 1;
-
     height: 31px;
-
     border: 0;
     border-radius: 9px;
-
     background: transparent;
-
     color: rgba(23,32,51,.48);
-
     font-size: 10px;
     font-weight: 700;
-
     cursor: pointer;
-
-    transition:
-        background .15s ease,
-        color .15s ease,
-        box-shadow .15s ease;
 }
 
 .mn-region-tabs button.active {
     background: rgba(255,255,255,.86);
-
     color: #1677ff;
-
-    box-shadow:
-        0 2px 7px rgba(15,23,42,.08);
+    box-shadow: 0 2px 7px rgba(15,23,42,.08);
 }
 
 #mn-region-list {
     overflow: hidden;
-
     border-radius: 14px;
 }
 
@@ -1807,17 +1912,11 @@ body::after {
     display: flex;
     align-items: center;
     gap: 9px;
-
     min-height: 39px;
-
     padding: 0 11px;
-
     border-bottom: 1px solid rgba(15,23,42,.055);
-
     background: rgba(255,255,255,.30);
-
     color: #344054;
-
     font-size: 11px;
     font-weight: 600;
 }
@@ -1829,48 +1928,45 @@ body::after {
 .mn-region-dot {
     width: 6px;
     height: 6px;
-
     flex: 0 0 auto;
-
     border-radius: 50%;
-
     background: #1677ff;
+    box-shadow: 0 0 0 3px rgba(22,119,255,.10);
+}
 
-    box-shadow:
-        0 0 0 3px rgba(22,119,255,.10);
+.mn-region-flag {
+    width: 20px;
+    flex: 0 0 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
 }
 
 .mn-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
-
     padding: 35px 20px;
-
     text-align: center;
-
     color: rgba(23,32,51,.46);
 }
 
 .mn-empty-icon {
     margin-bottom: 10px;
-
     color: #9aabc0;
-
     font-size: 28px;
 }
 
 .mn-empty strong {
     color: #465467;
-
     font-size: 12px;
 }
 
 .mn-empty span {
     max-width: 220px;
-
     margin-top: 6px;
-
     font-size: 10px;
     line-height: 1.45;
 }
@@ -1878,8 +1974,9 @@ body::after {
 @media (max-width: 700px) {
 
     #mapnest-insights-toggle {
-        left: 12px;
-        bottom: 12px;
+        right: 14px;
+        bottom: 68px;
+        left: auto;
     }
 
     #mapnest-insights {

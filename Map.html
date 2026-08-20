@@ -431,7 +431,8 @@ body {
 
 <!-- MAPNEST INSIGHTS -->
 <button id="mapnest-insights-toggle" aria-label="Open MapNest Insights">
-    <span>◔</span>
+    <span class="mn-insights-orb-core">◔</span>
+    <span class="mn-insights-orb-ring"></span>
     <small>Insights</small>
 </button>
 
@@ -1150,19 +1151,134 @@ body {
             .replace(/'/g, "&#039;");
     }
 
-    toggle.addEventListener("click", function () {
-
+    function openInsights() {
         panel.classList.add("open");
         panel.setAttribute("aria-hidden", "false");
-
+        toggle.classList.add("expanded");
         update();
+    }
+
+    function closeInsights() {
+        panel.classList.remove("open");
+        panel.setAttribute("aria-hidden", "true");
+        toggle.classList.remove("expanded");
+    }
+
+    toggle.addEventListener("click", function () {
+
+        if (panel.classList.contains("open"))
+            closeInsights();
+        else
+            openInsights();
+
     });
 
     close.addEventListener("click", function () {
-
-        panel.classList.remove("open");
-        panel.setAttribute("aria-hidden", "true");
+        closeInsights();
     });
+
+    /*
+     * Introduce the Insights orb immediately after the
+     * first country layer has actually finished loading.
+     */
+    /*
+     * MAPNEST INSIGHTS — FIRST-LOAD EXPERIENCE
+     *
+     * Automatically open Insights once every 24 hours.
+     * The cooldown survives page reloads and workspace changes.
+     */
+
+    (function revealInsightsOrb() {
+
+        const COOLDOWN =
+            24 * 60 * 60 * 1000;
+
+        const AUTO_OPEN_KEY =
+            "mapnest_insights_auto_opened_at";
+
+        const now =
+            Date.now();
+
+        const lastOpened =
+            Number(
+                localStorage.getItem(
+                    AUTO_OPEN_KEY
+                ) || 0
+            );
+
+        const cooldownActive =
+            lastOpened > 0 &&
+            (now - lastOpened) < COOLDOWN;
+
+
+        /*
+         * Wait until the actual country layer exists.
+         * This means the experience starts after the
+         * map is genuinely ready rather than after an
+         * arbitrary timer.
+         */
+        if (
+            !window.MapApp ||
+            !MapApp.countryLayer ||
+            typeof MapApp.countryLayer.getLayers !== "function" ||
+            !MapApp.countryLayer.getLayers().length
+        ) {
+
+            setTimeout(
+                revealInsightsOrb,
+                80
+            );
+
+            return;
+        }
+
+
+        /*
+         * Orb enters first.
+         */
+        toggle.classList.add(
+            "revealed"
+        );
+
+
+        /*
+         * Only automatically open the panel
+         * when the 24-hour cooldown has expired.
+         */
+        if (!cooldownActive) {
+
+            /*
+             * Give the orb a tiny moment to
+             * complete its entrance animation.
+             */
+            setTimeout(function () {
+
+                /*
+                 * Record the automatic opening
+                 * BEFORE opening the panel.
+                 */
+                localStorage.setItem(
+                    AUTO_OPEN_KEY,
+                    String(Date.now())
+                );
+
+                /*
+                 * Use the existing Insights toggle
+                 * so opening behaves exactly like a
+                 * normal user click.
+                 */
+                if (
+                    !panel.classList.contains("open")
+                ) {
+                    toggle.click();
+                }
+
+            }, 720);
+
+        }
+
+    })();
+
 
     document.querySelectorAll(
         "[data-insight-level]"
