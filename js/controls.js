@@ -99,7 +99,7 @@ MapControls.nextLevel = function() {
 
 MapControls.projectsKey = "mapnest_projects_v1";
 MapControls.activeProjectKey = "mapnest_active_project";
-MapControls.defaultProject = "Countries I Visited";
+MapControls.defaultProject = "My Map";
 
 MapControls.getProjects = function() {
     try {
@@ -127,6 +127,14 @@ MapControls.setActiveProject = function(name) {
 (function initializeProjects() {
     const projects = MapControls.getProjects();
     const oldData = localStorage.getItem("map_saved_colors_v1");
+
+    /* Rename the original assumed default to the neutral default. */
+    if (projects["Countries I Visited"] &&
+        !projects["My Map"]) {
+        projects["My Map"] =
+            projects["Countries I Visited"];
+        delete projects["Countries I Visited"];
+    }
 
     if (!projects[MapControls.defaultProject]) {
         try {
