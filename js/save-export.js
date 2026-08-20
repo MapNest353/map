@@ -1,6 +1,7 @@
 (function () {
 
-    const STORAGE_KEY = "map_coloring_v2";
+    const PROJECT_KEY = "mapnest_projects";
+const STORAGE_KEY = "map_coloring_v2";
 
     function read() {
         try {
