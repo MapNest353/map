@@ -82,7 +82,6 @@ MapApp.clearOldDataCache = function() {
 MapApp.clearOldDataCache();
 
 MapApp.dataCache = {};
-MapApp.layerCache = {};
 MapApp.dataPromises = {};
 MapApp.cacheDB = null;
 
@@ -743,13 +742,6 @@ MapApp.preloadGlobalLevels = async function () {
 MapApp.showCountry = async function () {
 
     // FAST PATH: reuse an already-rendered Leaflet layer.
-    if (MapApp.layerCache.country) {
-        MapApp.removeLayers();
-        MapApp.countryLayer = MapApp.layerCache.country;
-        MapApp.countryLayer.addTo(MapApp.map);
-        MapApp.updateLevelSelection("country");
-        return;
-    }
 
     MapApp.updateLevelSelection("country");
 
@@ -789,9 +781,6 @@ MapApp.showCountry = async function () {
             "country"
         );
 
-        MapApp.layerCache.country =
-            MapApp.countryLayer;
-
         MapApp.restoreView(savedView);
         MapApp.hideLoading();
 
@@ -805,15 +794,6 @@ MapApp.showCountry = async function () {
 };
 
 MapApp.showStates = async function () {
-
-    // FAST PATH: reuse an already-rendered Leaflet layer.
-    if (MapApp.layerCache.state) {
-        MapApp.removeLayers();
-        MapApp.stateLayer = MapApp.layerCache.state;
-        MapApp.stateLayer.addTo(MapApp.map);
-        MapApp.updateLevelSelection("state");
-        return;
-    }
 
     MapApp.updateLevelSelection("state");
 
@@ -833,6 +813,8 @@ MapApp.showStates = async function () {
 
                 const data = await MapApp.loadAll("state");
 
+        console.time("STATE Leaflet construction");
+
         MapApp.stateLayer = L.geoJSON(data, {
 
             style: {
@@ -846,15 +828,16 @@ MapApp.showStates = async function () {
                 MapApp.bindHoverName(feature, layer, "state");
             }
 
-        }).addTo(MapApp.map);
+        });
+
+        console.timeEnd("STATE Leaflet construction");
+
+        MapApp.stateLayer.addTo(MapApp.map);
 
         MapControls.restoreLayerColors(
             MapApp.stateLayer,
             "state"
         );
-
-        MapApp.layerCache.state =
-            MapApp.stateLayer;
 
         MapApp.restoreView(savedView);
         MapApp.hideLoading();
@@ -866,15 +849,6 @@ MapApp.showStates = async function () {
 };
 
 MapApp.showDistricts = async function () {
-
-    // FAST PATH: reuse an already-rendered Leaflet layer.
-    if (MapApp.layerCache.district) {
-        MapApp.removeLayers();
-        MapApp.districtLayer = MapApp.layerCache.district;
-        MapApp.districtLayer.addTo(MapApp.map);
-        MapApp.updateLevelSelection("district");
-        return;
-    }
 
     MapApp.updateLevelSelection("district");
 
@@ -894,6 +868,8 @@ MapApp.showDistricts = async function () {
 
                 const data = await MapApp.loadAll("district");
 
+        console.time("DISTRICT Leaflet construction");
+
         MapApp.districtLayer = L.geoJSON(data, {
 
             style: {
@@ -907,15 +883,16 @@ MapApp.showDistricts = async function () {
                 MapApp.bindHoverName(feature, layer, "district");
             }
 
-        }).addTo(MapApp.map);
+        });
+
+        console.timeEnd("DISTRICT Leaflet construction");
+
+        MapApp.districtLayer.addTo(MapApp.map);
 
         MapControls.restoreLayerColors(
             MapApp.districtLayer,
             "district"
         );
-
-        MapApp.layerCache.district =
-            MapApp.districtLayer;
 
         MapApp.restoreView(savedView);
         MapApp.hideLoading();
