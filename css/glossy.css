@@ -867,3 +867,152 @@ body::after {
     }
 }
 
+/* =========================================================
+   MAPNEST — UNIFIED COMMAND CENTER
+   ========================================================= */
+
+#levelButton {
+    display: none !important;
+}
+
+.mapnest-command-center {
+    gap: 4px !important;
+    padding: 8px !important;
+    border-radius: 20px !important;
+}
+
+.mapnest-command-center button {
+    width: auto !important;
+    min-width: 70px !important;
+    height: 42px !important;
+
+    padding: 0 11px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+
+    border-radius: 12px !important;
+}
+
+.mapnest-command-center .mn-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.mapnest-command-center .mn-label {
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: -.01em;
+}
+
+#mn-project-slot {
+    display: flex;
+    align-items: center;
+}
+
+#mn-project-slot #mapnest-project-selector {
+    position: static !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    width: auto !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    border: 0 !important;
+    border-radius: 12px !important;
+
+    background: transparent !important;
+    box-shadow: none !important;
+
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#mn-project-slot #mapnest-project-selector select {
+    height: 42px !important;
+
+    max-width: 175px !important;
+
+    border: 1px solid rgba(255,255,255,.65) !important;
+    border-radius: 12px !important;
+
+    padding: 0 28px 0 12px !important;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(255,255,255,.86),
+            rgba(239,245,252,.72)
+        ) !important;
+
+    color: #172033 !important;
+
+    font-size: 11px !important;
+    font-weight: 700 !important;
+
+    box-shadow:
+        inset 0 1px 0 white,
+        0 3px 12px rgba(15,23,42,.07) !important;
+}
+
+#mn-project-slot #mapnest-project-selector button {
+    width: 38px !important;
+    height: 38px !important;
+
+    min-width: 38px !important;
+
+    margin-left: 4px !important;
+    padding: 0 !important;
+
+    border-radius: 11px !important;
+
+    font-size: 18px !important;
+}
+
+@media (max-width: 850px) {
+
+    .mapnest-command-center .mn-label {
+        display: none;
+    }
+
+    .mapnest-command-center button {
+        min-width: 42px !important;
+        padding: 0 10px !important;
+    }
+
+    #mn-project-slot #mapnest-project-selector select {
+        max-width: 145px !important;
+    }
+}
+
+
+
+/* =========================================================
+   MAPNEST — REMOVE DUPLICATE CONTROLS
+   ========================================================= */
+
+/* Search already has its own dedicated control above. */
+#mn-search {
+    display: none !important;
+}
+
+/* Country / States / Districts standalone controls. */
+.map-level-controls {
+    display: none !important;
+}
+
+/* Old standalone level button. */
+#levelButton {
+    display: none !important;
+}
+
+/* Old standalone Reset / export control. */
+.map-export-controls,
+#save-export-controls {
+    display: none !important;
+}

@@ -126,30 +126,38 @@ body {
 
 <body>
 
-<!-- MAPNEST PREMIUM COMMAND CENTER -->
+<!-- MAPNEST COMMAND CENTER -->
 <div class="mapnest-command-center">
 
     <button id="mn-home" title="Reset view">
-        ⌂
-        <span class="tooltip">Reset View</span>
-    </button>
-
-    <button id="mn-search" title="Search">
-        ⌕
-        <span class="tooltip">Search</span>
+        <span class="mn-icon">⌂</span>
+        <span class="mn-label">Home</span>
     </button>
 
     <span class="divider"></span>
 
-
-    <button id="mn-project" title="Projects">
-        ◎
-        <span class="tooltip">Projects</span>
+    <button id="mn-country" title="Countries">
+        <span class="mn-icon">◉</span>
+        <span class="mn-label">Countries</span>
     </button>
 
+    <button id="mn-state" title="States">
+        <span class="mn-icon">◈</span>
+        <span class="mn-label">States</span>
+    </button>
+
+    <button id="mn-district" title="Districts">
+        <span class="mn-icon">◇</span>
+        <span class="mn-label">Districts</span>
+    </button>
+
+    <span class="divider"></span>
+
+    <div id="mn-project-slot"></div>
+
     <button id="mn-reset" title="Reset markings">
-        ↺
-        <span class="tooltip">Reset Markings</span>
+        <span class="mn-icon">↺</span>
+        <span class="mn-label">Reset</span>
     </button>
 
 </div>
@@ -214,9 +222,7 @@ body {
 
 </div>
 
-<button id="levelButton">
-    Countries
-</button>
+
 
 <div id="info">
 
@@ -240,37 +246,7 @@ body {
 
 <!-- Our code -->
 
-<script>
-(function () {
 
-    function click(id) {
-        const el = document.getElementById(id);
-        if (el) el.click();
-    }
-
-    document.getElementById("mn-search").onclick = function () {
-        const search = document.getElementById("search");
-        if (search) {
-            search.focus();
-            search.select();
-        }
-    };
-
-    document.getElementById("mn-home").onclick = function () {
-        if (window.MapApp && MapApp.map)
-            MapApp.map.setView([20, 0], 2);
-    };
-
-    document.getElementById("mn-reset").onclick = function () {
-        if (window.MapControls &&
-            typeof MapControls.resetColors === "function") {
-            if (confirm("Reset all saved markings?"))
-                MapControls.resetColors();
-        }
-    };
-
-})();
-</script>
 <script src="js/data-loader.js?v=local" + Date.now() + ""></script>
 
 <script src="js/layers.js?v=1787204164"></script>
@@ -299,6 +275,234 @@ body {
             welcome.remove();
         }, 260);
     };
+})();
+</script>
+
+<script>
+(function () {
+
+    function byId(id) {
+        return document.getElementById(id);
+    }
+
+    function activate(id) {
+        document.querySelectorAll(".mn-level-btn")
+            .forEach(function (b) {
+                b.classList.remove("active");
+            });
+
+        const el = byId(id);
+        if (el) el.classList.add("active");
+    }
+
+    const home = byId("mn-home");
+    const search = byId("mn-search");
+    const country = byId("mn-country");
+    const state = byId("mn-state");
+    const district = byId("mn-district");
+    const reset = byId("mn-reset");
+    const fullscreen = byId("mn-fullscreen");
+
+    if (home) {
+        home.onclick = function () {
+            if (window.MapApp && MapApp.map)
+                MapApp.map.setView([20, 0], 2);
+        };
+    }
+
+    if (search) {
+        search.onclick = function () {
+            const input = byId("search");
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        };
+    }
+
+    if (country) {
+        country.onclick = async function () {
+            if (window.MapApp) {
+                activate("mn-country");
+                await MapApp.showCountry();
+            }
+        };
+    }
+
+    if (state) {
+        state.onclick = async function () {
+            if (window.MapApp) {
+                activate("mn-state");
+                await MapApp.showStates();
+            }
+        };
+    }
+
+    if (district) {
+        district.onclick = async function () {
+            if (window.MapApp) {
+                activate("mn-district");
+                await MapApp.showDistricts();
+            }
+        };
+    }
+
+    if (fullscreen) {
+        fullscreen.onclick = function () {
+
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+
+        };
+    }
+
+    if (reset) {
+        reset.onclick = function () {
+
+            if (
+                window.MapControls &&
+                typeof MapControls.resetColors === "function"
+            ) {
+                if (confirm("Reset all markings in this project?"))
+                    MapControls.resetColors();
+            }
+
+        };
+    }
+
+    /* Live map telemetry */
+
+    function updateHUD() {
+
+        if (!window.MapApp || !MapApp.map)
+            return;
+
+        const map = MapApp.map;
+        const center = map.getCenter();
+
+        const zoom = byId("mn-zoom-readout");
+        const position = byId("mn-position-readout");
+
+        if (zoom)
+            zoom.textContent =
+                "ZOOM " + map.getZoom().toFixed(1);
+
+        if (position) {
+
+            const lat =
+                Math.abs(center.lat).toFixed(1) +
+                "° " +
+                (center.lat >= 0 ? "N" : "S");
+
+            const lng =
+                Math.abs(center.lng).toFixed(1) +
+                "° " +
+                (center.lng >= 0 ? "E" : "W");
+
+            position.textContent =
+                lat + " · " + lng;
+        }
+    }
+
+    setInterval(updateHUD, 250);
+
+    document.addEventListener(
+        "fullscreenchange",
+        function () {
+            const btn = byId("mn-fullscreen");
+
+            if (btn)
+                btn.classList.toggle(
+                    "active",
+                    !!document.fullscreenElement
+                );
+        }
+    );
+
+})();
+</script>
+
+<script>
+(function () {
+
+    function bind(id, fn) {
+        const el = document.getElementById(id);
+        if (el) el.onclick = fn;
+    }
+
+    bind("mn-home", function () {
+        if (window.MapApp && MapApp.map)
+            MapApp.map.setView([20, 0], 2);
+    });
+
+    bind("mn-country", function () {
+        if (window.MapApp)
+            MapApp.showCountry();
+    });
+
+    bind("mn-state", function () {
+        if (window.MapApp)
+            MapApp.showStates();
+    });
+
+    bind("mn-district", function () {
+        if (window.MapApp)
+            MapApp.showDistricts();
+    });
+
+    bind("mn-project", function () {
+        const selector =
+            document.getElementById("mapnest-project-select");
+
+        if (selector) {
+            selector.focus();
+            selector.click();
+        }
+    });
+
+    bind("mn-reset", function () {
+        if (window.MapControls &&
+            typeof MapControls.resetColors === "function") {
+
+            if (confirm("Reset markings in this project?"))
+                MapControls.resetColors();
+        }
+    });
+
+})();
+</script>
+
+<script>
+(function () {
+
+    function organizeMapNestUI() {
+
+        const center =
+            document.querySelector(".mapnest-command-center");
+
+        const project =
+            document.getElementById("mapnest-project-selector");
+
+        const slot =
+            document.getElementById("mn-project-slot");
+
+        if (center && project && slot && !slot.contains(project)) {
+            slot.appendChild(project);
+            project.style.position = "static";
+            project.style.top = "auto";
+            project.style.right = "auto";
+            project.style.left = "auto";
+            project.style.bottom = "auto";
+            project.style.margin = "0";
+        }
+    }
+
+    setTimeout(organizeMapNestUI, 700);
+    setTimeout(organizeMapNestUI, 1500);
+
 })();
 </script>
 </body>
