@@ -505,6 +505,80 @@ body {
 
 })();
 </script>
+
+<script>
+(function () {
+
+    const welcome =
+        document.getElementById("mapnest-welcome");
+
+    if (!welcome) return;
+
+    let shown = false;
+
+    function showWelcome() {
+
+        if (shown) return;
+        shown = true;
+
+        /* Give Leaflet one final paint frame. */
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                welcome.classList.add("is-ready");
+            });
+        });
+    }
+
+    function mapIsReady() {
+
+        if (!window.MapApp || !MapApp.map)
+            return false;
+
+        /*
+         * Country layer is the only layer required
+         * for MapNest startup.
+         */
+        if (!MapApp.countryLayer)
+            return false;
+
+        if (typeof MapApp.countryLayer.getLayers !== "function")
+            return false;
+
+        return MapApp.countryLayer.getLayers().length > 0;
+    }
+
+    function waitForMap() {
+
+        if (mapIsReady()) {
+            showWelcome();
+            return;
+        }
+
+        setTimeout(waitForMap, 100);
+    }
+
+    /*
+     * Do not show the welcome screen while MapNest
+     * is loading. Wait for the actual country layer.
+     */
+    waitForMap();
+
+    /*
+     * Clicking anywhere on the welcome overlay dismisses it.
+     */
+    welcome.addEventListener("click", function () {
+
+        welcome.classList.add("dismissed");
+
+        setTimeout(function () {
+            if (welcome.parentNode)
+                welcome.remove();
+        }, 10);
+
+    });
+
+})();
+</script>
 </body>
 </html>
 
@@ -519,3 +593,34 @@ body {
     background: #e9e9e9 !important;
 }
 </style>
+
+<style>
+#mapnest-welcome {
+    cursor: pointer;
+}
+</style>
+
+<script>
+(function () {
+
+    const welcome =
+        document.getElementById("mapnest-welcome");
+
+    if (!welcome) return;
+
+    function dismissWelcome() {
+        welcome.style.opacity = "0";
+        welcome.style.pointerEvents = "none";
+        welcome.style.transition = "opacity .25s ease";
+
+        setTimeout(function () {
+            if (welcome.parentNode)
+                welcome.remove();
+        }, 260);
+    }
+
+    /* Anything on the welcome screen dismisses it. */
+    welcome.addEventListener("click", dismissWelcome);
+
+})();
+</script>

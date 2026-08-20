@@ -396,6 +396,78 @@ MapControls.removeSavedColor = function(
 };
 
 
+/* =========================================================
+   INSTANT PROJECT SWITCHING
+   ========================================================= */
+
+MapControls.reloadActiveProject = async function() {
+
+    const active =
+        MapControls.getActiveProject();
+
+    MapControls.storageKey =
+        "mapnest_project_" +
+        encodeURIComponent(active);
+
+    /* Clear current visual selections. */
+    if (MapLayers.currentLayer) {
+
+        const level =
+            MapControls.levels[
+                MapControls.currentIndex
+            ];
+
+        MapLayers.currentLayer.eachLayer(function(item) {
+
+            if (!item.feature) return;
+
+            item.setStyle(
+                MapLayers.styles[level]
+            );
+
+            item._mapSelected = false;
+        });
+
+        /* Restore the selected regions belonging
+           to the newly active workspace. */
+        MapControls.restoreLayerColors(
+            MapLayers.currentLayer,
+            level
+        );
+    }
+
+    /* Also restore whichever global map layer is active. */
+    if (window.MapApp) {
+
+        if (MapApp.countryLayer &&
+            MapControls.currentIndex === 0) {
+
+            MapControls.restoreLayerColors(
+                MapApp.countryLayer,
+                "country"
+            );
+        }
+
+        if (MapApp.stateLayer &&
+            MapControls.currentIndex === 1) {
+
+            MapControls.restoreLayerColors(
+                MapApp.stateLayer,
+                "state"
+            );
+        }
+
+        if (MapApp.districtLayer &&
+            MapControls.currentIndex === 2) {
+
+            MapControls.restoreLayerColors(
+                MapApp.districtLayer,
+                "district"
+            );
+        }
+    }
+};
+
 MapControls.resetColors = function() {
 
     localStorage.removeItem(
