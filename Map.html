@@ -514,17 +514,53 @@ body {
 
     if (!welcome) return;
 
+    /*
+     * MapNest welcome is shown ONLY ONCE:
+     * the first time this browser opens the homepage.
+     *
+     * Reloading homepage:
+     *     no welcome
+     *
+     * Opening another page:
+     *     no welcome
+     *
+     * Returning to homepage:
+     *     no welcome
+     *
+     * Changing workspace:
+     *     no welcome
+     */
+
+    const WELCOME_KEY =
+        "mapnest_home_welcome_seen_v1";
+
+    if (localStorage.getItem(WELCOME_KEY) === "1") {
+        welcome.remove();
+        return;
+    }
+
     let shown = false;
+    let dismissed = false;
 
     function showWelcome() {
 
-        if (shown) return;
+        if (shown || dismissed) return;
+
         shown = true;
 
-        /* Give Leaflet one final paint frame. */
+        /* Mark it immediately so even a reload during
+           the animation will never show it again. */
+        localStorage.setItem(
+            WELCOME_KEY,
+            "1"
+        );
+
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {
-                welcome.classList.add("is-ready");
+
+                if (!dismissed)
+                    welcome.classList.add("is-ready");
+
             });
         });
     }
@@ -534,20 +570,23 @@ body {
         if (!window.MapApp || !MapApp.map)
             return false;
 
-        /*
-         * Country layer is the only layer required
-         * for MapNest startup.
-         */
         if (!MapApp.countryLayer)
             return false;
 
-        if (typeof MapApp.countryLayer.getLayers !== "function")
+        if (
+            typeof MapApp.countryLayer.getLayers !==
+            "function"
+        )
             return false;
 
-        return MapApp.countryLayer.getLayers().length > 0;
+        return (
+            MapApp.countryLayer.getLayers().length > 0
+        );
     }
 
     function waitForMap() {
+
+        if (dismissed) return;
 
         if (mapIsReady()) {
             showWelcome();
@@ -557,25 +596,29 @@ body {
         setTimeout(waitForMap, 100);
     }
 
-    /*
-     * Do not show the welcome screen while MapNest
-     * is loading. Wait for the actual country layer.
-     */
-    waitForMap();
+    function dismissWelcome() {
 
-    /*
-     * Clicking anywhere on the welcome overlay dismisses it.
-     */
-    welcome.addEventListener("click", function () {
+        if (dismissed) return;
+
+        dismissed = true;
 
         welcome.classList.add("dismissed");
 
         setTimeout(function () {
+
             if (welcome.parentNode)
                 welcome.remove();
-        }, 10);
 
-    });
+        }, 10);
+    }
+
+    waitForMap();
+
+    /* Click anywhere on the welcome screen. */
+    welcome.addEventListener(
+        "click",
+        dismissWelcome
+    );
 
 })();
 </script>
