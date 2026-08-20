@@ -7,6 +7,57 @@ MapApp.map = L.map("map", {
     worldCopyJump: false
 });
 
+
+/*
+ * Keyboard zoom controls.
+ * + / = / ArrowUp  -> zoom in
+ * - / _ / ArrowDown -> zoom out
+ * Never zoom farther out than the initial world view.
+ */
+MapApp.setupKeyboardZoom = function () {
+
+    if (MapApp.keyboardZoomReady) return;
+    MapApp.keyboardZoomReady = true;
+
+    document.addEventListener("keydown", function (event) {
+
+        const target = event.target;
+
+        if (
+            target &&
+            (
+                target.tagName === "INPUT" ||
+                target.tagName === "TEXTAREA" ||
+                target.tagName === "SELECT" ||
+                target.isContentEditable
+            )
+        ) {
+            return;
+        }
+
+        if (event.key === "+" || event.key === "=" || event.key === "ArrowUp") {
+            event.preventDefault();
+            MapApp.map.zoomIn();
+        }
+
+        if (event.key === "-" || event.key === "_" || event.key === "ArrowDown") {
+            event.preventDefault();
+
+            const minZoom =
+                MapApp.worldMinZoom !== null
+                    ? MapApp.worldMinZoom
+                    : MapApp.map.getMinZoom();
+
+            if (MapApp.map.getZoom() > minZoom) {
+                MapApp.map.zoomOut();
+            } else {
+                MapApp.map.setZoom(minZoom);
+            }
+        }
+    });
+};
+
+
 MapApp.map.setView([20, 0], 2);
 
 L.tileLayer(
@@ -678,6 +729,7 @@ MapApp.showCountry = async function () {
         );
 
         MapApp.restoreView(savedView);
+
         MapApp.hideLoading();
 
         // Begin background preload immediately.
@@ -1479,3 +1531,54 @@ MapApp.initSearch = function() {
 MapApp.initSearch();
 
 startMap();
+
+
+
+/* CUSTOM KEYBOARD MAP CONTROLS */
+document.addEventListener("keydown", function (event) {
+
+    const tag = event.target && event.target.tagName;
+
+    // Never interfere with typing/search fields.
+    if (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT"
+    ) {
+        return;
+    }
+
+    const map = MapApp.map;
+
+    if (!map) {
+        return;
+    }
+
+    /*
+     * ZOOM
+     * + / ↑ = zoom in
+     * - / ↓ = zoom out
+     */
+    if (
+        event.key === "+" ||
+        event.key === "=" ||
+        event.key === "ArrowUp" ||
+        event.code === "NumpadAdd"
+    ) {
+        event.preventDefault();
+        map.zoomIn();
+        return;
+    }
+
+    if (
+        event.key === "-" ||
+        event.key === "_" ||
+        event.key === "ArrowDown" ||
+        event.code === "NumpadSubtract"
+    ) {
+        event.preventDefault();
+        map.zoomOut();
+        return;
+    }
+
+});
