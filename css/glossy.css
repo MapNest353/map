@@ -2002,3 +2002,260 @@ body::after {
     font-size: 16px;
     line-height: 1;
 }
+
+/* =========================================================
+   MAPNEST — FLOATING ZOOM NAVIGATION
+   ========================================================= */
+
+/*
+ * Lift Leaflet zoom controls above the Insights orb.
+ */
+.leaflet-bottom.leaflet-right .leaflet-control-zoom {
+    position: relative;
+
+    margin-right: 20px !important;
+    margin-bottom: 142px !important;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 5px;
+
+    border: 1px solid rgba(255,255,255,.82) !important;
+    border-radius: 16px !important;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,.82),
+            rgba(224,234,244,.68)
+        ) !important;
+
+    backdrop-filter: blur(22px) saturate(170%);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+
+    box-shadow:
+        0 12px 32px rgba(15,23,42,.15),
+        0 2px 7px rgba(15,23,42,.07),
+        inset 0 1px 0 rgba(255,255,255,.95) !important;
+
+    overflow: hidden;
+}
+
+/* individual zoom buttons */
+.leaflet-bottom.leaflet-right
+.leaflet-control-zoom a {
+    width: 34px !important;
+    height: 34px !important;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+
+    background: transparent !important;
+
+    color: #344054 !important;
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        sans-serif !important;
+
+    font-size: 19px !important;
+    font-weight: 500 !important;
+
+    line-height: 34px !important;
+
+    transition:
+        background .18s ease,
+        color .18s ease,
+        transform .18s cubic-bezier(.2,.8,.2,1),
+        box-shadow .18s ease;
+}
+
+.leaflet-bottom.leaflet-right
+.leaflet-control-zoom a:hover {
+    background: rgba(255,255,255,.82) !important;
+
+    color: #1677ff !important;
+
+    transform: scale(1.04);
+
+    box-shadow:
+        0 4px 12px rgba(15,23,42,.10),
+        inset 0 1px 0 white;
+}
+
+.leaflet-bottom.leaflet-right
+.leaflet-control-zoom a:active {
+    transform: scale(.88);
+}
+
+/* elegant separator */
+.leaflet-bottom.leaflet-right
+.leaflet-control-zoom a + a {
+    border-top:
+        1px solid rgba(15,23,42,.07) !important;
+}
+
+/* remove old Leaflet square corners */
+.leaflet-control-zoom {
+    border: 0 !important;
+}
+
+/* tiny floating shadow beneath the module */
+.leaflet-bottom.leaflet-right
+.leaflet-control-zoom::after {
+    content: "";
+
+    position: absolute;
+
+    left: 18%;
+    right: 18%;
+    bottom: -8px;
+
+    height: 10px;
+
+    border-radius: 50%;
+
+    background: rgba(22,119,255,.10);
+
+    filter: blur(9px);
+
+    z-index: -1;
+}
+
+/* Mobile */
+@media (max-width: 700px) {
+
+    .leaflet-bottom.leaflet-right
+    .leaflet-control-zoom {
+        margin-right: 14px !important;
+        margin-bottom: 132px !important;
+    }
+
+}
+
+
+/* =========================================================
+   MAPNEST — FINAL FLOATING ZOOM POSITION
+   ========================================================= */
+
+.leaflet-control-zoom {
+    position: fixed !important;
+
+    right: 22px !important;
+    bottom: 143px !important;
+
+    margin: 0 !important;
+
+    z-index: 4500 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 3px;
+
+    padding: 5px !important;
+
+    border: 1px solid rgba(255,255,255,.88) !important;
+    border-radius: 15px !important;
+
+    background:
+        rgba(244,248,252,.72) !important;
+
+    backdrop-filter: blur(20px) saturate(175%);
+    -webkit-backdrop-filter: blur(20px) saturate(175%);
+
+    box-shadow:
+        0 10px 30px rgba(15,23,42,.14),
+        0 2px 7px rgba(15,23,42,.07),
+        inset 0 1px 0 rgba(255,255,255,.95) !important;
+
+    overflow: hidden !important;
+}
+
+.leaflet-control-zoom a {
+    width: 32px !important;
+    height: 32px !important;
+
+    margin: 0 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    border: 0 !important;
+    border-radius: 10px !important;
+
+    background: transparent !important;
+
+    color: #344054 !important;
+
+    font-size: 18px !important;
+    font-weight: 500 !important;
+
+    line-height: 32px !important;
+
+    transition:
+        background .16s ease,
+        color .16s ease,
+        transform .16s cubic-bezier(.2,.8,.2,1);
+}
+
+.leaflet-control-zoom a:hover {
+    background: rgba(255,255,255,.9) !important;
+    color: #1677ff !important;
+
+    transform: scale(1.06);
+}
+
+.leaflet-control-zoom a:active {
+    transform: scale(.88);
+}
+
+.leaflet-control-zoom a + a {
+    border-top:
+        1px solid rgba(15,23,42,.065) !important;
+}
+
+/* remove all legacy Leaflet framing */
+.leaflet-control-zoom,
+.leaflet-control-zoom a {
+    box-shadow: none !important;
+}
+
+/* subtle floating shadow */
+.leaflet-control-zoom::after {
+    content: "";
+
+    position: absolute;
+
+    left: 18%;
+    right: 18%;
+    bottom: -9px;
+
+    height: 10px;
+
+    border-radius: 50%;
+
+    background: rgba(22,119,255,.10);
+
+    filter: blur(8px);
+
+    z-index: -1;
+}
+
+/* Keep it above the Insights orb on smaller screens too */
+@media (max-width: 700px) {
+
+    .leaflet-control-zoom {
+        right: 14px !important;
+        bottom: 133px !important;
+    }
+
+}
