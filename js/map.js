@@ -4,6 +4,7 @@ MapApp.map = L.map("map", {
     minZoom: 2,
     maxZoom: 18,
     zoomControl: true,
+    keyboard: false,
     worldCopyJump: false
 });
 
