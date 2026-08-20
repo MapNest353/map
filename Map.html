@@ -122,9 +122,80 @@ body {
 }
 </style>
     <link rel="stylesheet" href="css/style.css?v=2026081901">
-</head>
+<link rel="stylesheet" href="css/glossy.css?v=local"></head>
 
 <body>
+
+<!-- MAPNEST PREMIUM COMMAND CENTER -->
+<div class="mapnest-command-center">
+
+    <button id="mn-home" title="Reset view">
+        ⌂
+        <span class="tooltip">Reset View</span>
+    </button>
+
+    <button id="mn-search" title="Search">
+        ⌕
+        <span class="tooltip">Search</span>
+    </button>
+
+    <span class="divider"></span>
+
+
+    <button id="mn-project" title="Projects">
+        ◎
+        <span class="tooltip">Projects</span>
+    </button>
+
+    <button id="mn-reset" title="Reset markings">
+        ↺
+        <span class="tooltip">Reset Markings</span>
+    </button>
+
+</div>
+
+<!-- MAPNEST WELCOME -->
+<div id="mapnest-welcome">
+    <div class="mapnest-welcome-card">
+
+        <div class="mapnest-welcome-mark">✦</div>
+
+        <div class="mapnest-welcome-title">
+            Welcome to MapNest
+        </div>
+
+        <div class="mapnest-welcome-subtitle">
+            Your personal world map.
+        </div>
+
+        <div class="mapnest-welcome-grid">
+
+            <div>
+                <span>🌍</span>
+                <strong>Explore</strong>
+                <small>Navigate countries, states and districts.</small>
+            </div>
+
+            <div>
+                <span>✦</span>
+                <strong>Mark</strong>
+                <small>Click a region to add it to your map.</small>
+            </div>
+
+            <div>
+                <span>◌</span>
+                <strong>Projects</strong>
+                <small>Keep different maps completely separate.</small>
+            </div>
+
+        </div>
+
+        <button id="mapnest-welcome-start">
+            Start exploring
+        </button>
+
+    </div>
+</div>
 
 <div id="map"></div>
 
@@ -169,6 +240,37 @@ body {
 
 <!-- Our code -->
 
+<script>
+(function () {
+
+    function click(id) {
+        const el = document.getElementById(id);
+        if (el) el.click();
+    }
+
+    document.getElementById("mn-search").onclick = function () {
+        const search = document.getElementById("search");
+        if (search) {
+            search.focus();
+            search.select();
+        }
+    };
+
+    document.getElementById("mn-home").onclick = function () {
+        if (window.MapApp && MapApp.map)
+            MapApp.map.setView([20, 0], 2);
+    };
+
+    document.getElementById("mn-reset").onclick = function () {
+        if (window.MapControls &&
+            typeof MapControls.resetColors === "function") {
+            if (confirm("Reset all saved markings?"))
+                MapControls.resetColors();
+        }
+    };
+
+})();
+</script>
 <script src="js/data-loader.js?v=local" + Date.now() + ""></script>
 
 <script src="js/layers.js?v=1787204164"></script>
@@ -182,7 +284,24 @@ body {
 <script src="js/version.js?v=999999"></script>
 
 
-<script src="js/version-display.js"></script>\n</body>
+<script src="js/version-display.js"></script>\n<script>
+(function () {
+    const welcome = document.getElementById("mapnest-welcome");
+    const start = document.getElementById("mapnest-welcome-start");
+
+    if (!welcome || !start) return;
+
+    start.onclick = function () {
+        welcome.style.opacity = "0";
+        welcome.style.transition = "opacity .25s ease";
+
+        setTimeout(function () {
+            welcome.remove();
+        }, 260);
+    };
+})();
+</script>
+</body>
 </html>
 
 <style>
