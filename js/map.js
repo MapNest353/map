@@ -61,6 +61,32 @@ MapApp.setupKeyboardZoom = function () {
 
 MapApp.map.setView([20, 0], 2);
 
+
+/* =========================================================
+   LOCK MAP TO INITIAL WORLD VIEW
+   Prevents empty space beyond the original world viewport
+   at every zoom level and during all panning.
+   ========================================================= */
+
+MapApp.lockWorldBounds = function() {
+    const map = MapApp.map;
+
+    /*
+     * Capture the exact geographic rectangle visible
+     * when the site first opens.
+     */
+    MapApp.worldBounds = map.getBounds();
+
+    map.setMaxBounds(MapApp.worldBounds);
+
+    /*
+     * 1 = completely prevent dragging outside bounds.
+     */
+    map.options.maxBoundsViscosity = 1.0;
+};
+
+MapApp.lockWorldBounds();
+
 L.tileLayer(
     "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png",
     {

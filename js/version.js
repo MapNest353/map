@@ -1,2 +1,2 @@
-window.MAPNEST_VERSION = "v1.0.21";
-window.MAPNEST_UPDATED = "21 Aug 2026, 16:30:14";
+window.MAPNEST_VERSION = "v1.0.22";
+window.MAPNEST_UPDATED = "21 Aug 2026, 16:35:40";
