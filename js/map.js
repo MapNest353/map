@@ -8,6 +8,10 @@ MapApp.map = L.map("map", {
     worldCopyJump: false
 });
 
+/* Pointing index-finger cursor over clickable map areas. */
+MapApp.map.getContainer().style.cursor = "pointer";
+
+
 
 /*
  * Keyboard zoom controls.
@@ -882,6 +886,10 @@ MapApp.createLazyLayer = function(
 
     layer.eachLayer(function(child) {
         child._mapSelected = true;
+
+        if (child.getElement()) {
+            child.getElement().style.cursor = "pointer";
+        }
     });
 
     MapApp.lazyLayers.push({
