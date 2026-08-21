@@ -803,66 +803,40 @@ MapApp.findLazyFeature = async function(
 
 MapApp.createLazyLayer = function(
     feature,
-    level,
-    styleOverride
+    level
 ) {
 
-    MapApp.lazyLayers =
-        MapApp.lazyLayers || [];
-
-    const key =
-        MapControls.getFeatureKey(
-            feature,
-            level
-        );
-
-    /*
-     * NEVER create a second visual layer
-     * for the same selected feature.
-     */
-    const existing =
-        MapApp.lazyLayers.find(function(item) {
-            return (
-                item.level === level &&
-                item.key === key &&
-                item.layer &&
-                MapApp.map.hasLayer(item.layer)
-            );
-        });
-
-    if (existing) {
-        return existing.layer;
+    if (!MapApp.lazyLayers) {
+        MapApp.lazyLayers = [];
     }
-
-    const style =
-        styleOverride ||
-        MapLayers.styles[level];
 
     const layer =
         L.geoJSON(feature, {
 
-            style: style,
+            style:
+                MapLayers.styles[level],
 
             onEachFeature:
-                function(feature, child) {
+                function(feature, layer) {
+
                     MapApp.bindHoverName(
                         feature,
-                        child,
+                        layer,
                         level
                     );
                 }
 
-        }).addTo(MapApp.map);
+        });
 
-    layer.eachLayer(function(child) {
-        child._mapSelected = true;
-    });
+    layer.addTo(MapApp.map);
 
-    MapApp.lazyLayers.push({
-        level: level,
-        key: key,
-        layer: layer
-    });
+    MapApp.lazyLayer = layer;
+    MapApp.lazyLevel = level;
+
+    MapControls.restoreLayerColors(
+        layer,
+        level
+    );
 
     return layer;
 };
@@ -891,87 +865,6 @@ MapApp.enableLazyClicks = function(level) {
             if (!feature)
                 return;
 
-            const key =
-                MapControls.getFeatureKey(
-                    feature,
-                    level
-                );
-
-            const existing =
-                (MapApp.lazyLayers || []).find(
-                    function(item) {
-                        return (
-                            item.level === level &&
-                            item.key === key &&
-                            item.layer &&
-                            MapApp.map.hasLayer(item.layer)
-                        );
-                    }
-                );
-
-            /*
-             * SHIFT + CLICK = REMOVE
-             */
-            if (
-                event.originalEvent &&
-                event.originalEvent.shiftKey
-            ) {
-
-                if (existing) {
-
-                    const child =
-                        existing.layer.getLayers()[0];
-
-                    if (child) {
-                        MapControls.handleClick(
-                            {
-                                originalEvent:
-                                    event.originalEvent
-                            },
-                            child,
-                            level
-                        );
-                    }
-
-                    MapApp.map.removeLayer(
-                        existing.layer
-                    );
-
-                    MapApp.lazyLayers =
-                        MapApp.lazyLayers.filter(
-                            function(item) {
-                                return item !== existing;
-                            }
-                        );
-
-                } else {
-
-                    /*
-                     * Also remove the saved state
-                     * if a visual layer isn't present.
-                     */
-                    MapControls.removeSavedColor(
-                        feature,
-                        level
-                    );
-                }
-
-                return;
-            }
-
-            /*
-             * NORMAL CLICK:
-             *
-             * Already colored?
-             * Do absolutely nothing.
-             */
-            if (existing) {
-                return;
-            }
-
-            /*
-             * Create exactly ONE visual layer.
-             */
             const layer =
                 MapApp.createLazyLayer(
                     feature,
@@ -999,6 +892,7 @@ MapApp.enableLazyClicks = function(level) {
         MapApp.lazyClickHandler
     );
 };
+
 
 
 MapApp.lazyLayers = MapApp.lazyLayers || [];
@@ -1083,20 +977,8 @@ MapApp.showLazyLevel = async function(level) {
         MapApp.lazyBoundaryLayers || {};
 
     /*
-     * IMPORTANT:
-     *
-     * Clicking the SAME level button again must
-     * NOT destroy the current selections.
-     */
-    if (MapApp.lazyLevel === level) {
-        return;
-    }
-
-    /*
-     * Remove only the currently displayed
-     * colored selection polygons.
-     *
-     * Saved colors remain in localStorage.
+     * Remove ALL colored/selected polygon layers.
+     * Boundary-only layers are untouched.
      */
     if (MapApp.lazyLayers) {
 
@@ -1111,10 +993,23 @@ MapApp.showLazyLevel = async function(level) {
 
         });
 
+        MapApp.lazyLayers = [];
     }
 
-    MapApp.lazyLayers = [];
 
+    MapApp.map.eachLayer(function(layer) {
+
+        if (
+            layer &&
+            layer._mapSelected &&
+            layer !== MapApp.lazyBoundaryLayers.country &&
+            layer !== MapApp.lazyBoundaryLayers.state &&
+            layer !== MapApp.lazyBoundaryLayers.district
+        ) {
+            MapApp.map.removeLayer(layer);
+        }
+
+    });
 
     /*
      * Boundary hierarchy:
@@ -1124,36 +1019,19 @@ MapApp.showLazyLevel = async function(level) {
      * District → Country + States + Districts
      */
     const required = {
-        country: [
-            "country"
-        ],
-
-        state: [
-            "country",
-            "state"
-        ],
-
-        district: [
-            "country",
-            "state",
-            "district"
-        ]
+        country: ["country"],
+        state: ["country", "state"],
+        district: ["country", "state", "district"]
     };
 
-    const keep =
-        required[level];
+    const keep = required[level];
 
     try {
 
         /*
-         * Remove boundary levels that are
-         * no longer required.
+         * Remove boundary levels that should no longer exist.
          */
-        [
-            "country",
-            "state",
-            "district"
-        ].forEach(function(name) {
+        ["country", "state", "district"].forEach(function(name) {
 
             if (
                 !keep.includes(name) &&
@@ -1165,68 +1043,27 @@ MapApp.showLazyLevel = async function(level) {
                         MapApp.lazyBoundaryLayers[name]
                     )
                 ) {
-
                     MapApp.map.removeLayer(
                         MapApp.lazyBoundaryLayers[name]
                     );
-
                 }
 
             }
 
         });
 
-
         /*
-         * Create missing boundary layers.
+         * Construct only missing boundary layers.
          */
         for (const name of keep) {
 
-            await MapApp.createLazyBoundaryLayer(
-                name
-            );
+            await MapApp.createLazyBoundaryLayer(name);
 
         }
 
-
         /*
-         * Restore the saved colored regions
-         * for the level we're entering.
-         *
-         * Only saved regions become Leaflet
-         * polygons. Everything else remains
-         * boundary-only.
-         */
-        const data =
-            await MapApp.loadAll(level);
-
-        const saved =
-            MapControls.loadColors();
-
-        for (
-            const feature of
-            (data.features || [])
-        ) {
-
-            const key =
-                MapControls.getFeatureKey(
-                    feature,
-                    level
-                );
-
-            if (!saved[key])
-                continue;
-
-            MapApp.createLazyLayer(
-                feature,
-                level,
-                saved[key]
-            );
-        }
-
-
-        /*
-         * Keep boundary hierarchy visible.
+         * Draw hierarchy from strongest to weakest.
+         * Country borders must remain visually dominant.
          */
         if (
             MapApp.lazyBoundaryLayers.country &&
@@ -1255,9 +1092,8 @@ MapApp.showLazyLevel = async function(level) {
             MapApp.lazyBoundaryLayers.district.bringToFront();
         }
 
-
         /*
-         * Country boundary remains strongest.
+         * Country must ultimately sit above everything.
          */
         if (
             MapApp.lazyBoundaryLayers.country &&
@@ -1268,12 +1104,9 @@ MapApp.showLazyLevel = async function(level) {
             MapApp.lazyBoundaryLayers.country.bringToFront();
         }
 
-
         MapApp.lazyLevel = level;
 
-        MapApp.enableLazyClicks(
-            level
-        );
+        MapApp.enableLazyClicks(level);
 
     } catch (error) {
 
@@ -1287,7 +1120,7 @@ MapApp.showLazyLevel = async function(level) {
         MapApp.hideLoading();
 
     }
-};
+};;
 
 
 /* =========================================================
@@ -1295,35 +1128,103 @@ MapApp.showLazyLevel = async function(level) {
    ========================================================= */
 
 
-MapApp.bindHoverName = function(
-    feature,
-    layer,
-    level
-) {
+MapApp.bindHoverName = function (feature, layer, level) {
 
     const name =
-        MapApp.getFeatureName(
-            feature,
-            level
-        );
+        MapApp.getFeatureName(feature, level);
 
-    if (
-        name &&
-        name !== "Unknown"
-    ) {
+    if (name && name !== "Unknown") {
 
-        layer.bindTooltip(
-            name,
-            {
-                sticky: true,
-                direction: "top",
-                opacity: 0.95
-            }
-        );
+        layer.bindTooltip(name, {
+            sticky: true,
+            direction: "top",
+            opacity: 0.95
+        });
 
     }
-};
 
+    layer.on("click", function (event) {
+
+        const el = this.getElement();
+
+        if (el) {
+            el.blur();
+        }
+
+        const baseStyle =
+            level === "country"
+                ? {
+                    color: "#333",
+                    weight: 1,
+                    fillColor: "#3388ff",
+                    fillOpacity: 0.08
+                }
+                : level === "state"
+                    ? {
+                        color: "#333",
+                        weight: 1,
+                        fillColor: "#44aa55",
+                        fillOpacity: 0.08
+                    }
+                    : {
+                        color: "#333",
+                        weight: 1,
+                        fillColor: "#ffaa44",
+                        fillOpacity: 0.08
+                    };
+
+        if (
+            event.originalEvent &&
+            event.originalEvent.shiftKey
+        ) {
+
+            this.setStyle(baseStyle);
+            this._mapSelected = false;
+
+            if (
+                MapControls &&
+                MapControls.removeSavedColor
+            ) {
+                MapControls.removeSavedColor(
+                    feature,
+                    level
+                );
+            }
+
+        } else {
+
+            const selectedStyle = {
+                color: "#111111",
+                weight: baseStyle.weight + 1,
+                fillColor: baseStyle.fillColor,
+                fillOpacity: 0.65
+            };
+
+            this.setStyle(selectedStyle);
+            this._mapSelected = true;
+
+            if (
+                MapControls &&
+                MapControls.rememberColor
+            ) {
+                MapControls.rememberColor(
+                    feature,
+                    level,
+                    selectedStyle
+                );
+            }
+
+        }
+
+        const info =
+            document.getElementById("infoName");
+
+        if (info && name) {
+            info.textContent = name;
+        }
+
+    });
+};
 
 MapApp.showLoading = function () {
     let loader = document.getElementById("map-loading");
