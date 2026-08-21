@@ -1052,7 +1052,7 @@ MapApp.addLazyFeature = function(feature, level) {
     const layer = L.geoJSON(feature, {
         style: styles[level],
         onEachFeature: function(f, l) {
-            MapApp.bindHoverName(f, l, level);
+            /* Hover handled by global hover system. */
         }
     }).addTo(MapApp.map);
 
@@ -1295,33 +1295,159 @@ MapApp.showLazyLevel = async function(level) {
    ========================================================= */
 
 
-MapApp.bindHoverName = function(
-    feature,
-    layer,
-    level
-) {
 
-    const name =
-        MapApp.getFeatureName(
-            feature,
-            level
-        );
+/* =========================================================
+   MAPNEST — GLOBAL HOVER
+   ========================================================= */
+
+MapApp.hoverState = {
+    feature: null,
+    level: null,
+    tooltip: null,
+    frame: null,
+    lat: null,
+    lng: null
+};
+
+MapApp.clearGlobalHover = function() {
+    const h = MapApp.hoverState;
+
+    if (h.tooltip) {
+        h.tooltip.style.opacity = "0";
+    }
+
+    h.feature = null;
+    h.level = null;
+};
+
+MapApp.showGlobalHover = async function() {
+    const h = MapApp.hoverState;
 
     if (
-        name &&
-        name !== "Unknown"
-    ) {
+        h.lat === null ||
+        h.lng === null ||
+        !MapApp.lazyLevel
+    ) return;
 
-        layer.bindTooltip(
-            name,
-            {
-                sticky: true,
-                direction: "top",
-                opacity: 0.95
-            }
-        );
+    const feature = await MapApp.findLazyFeature(
+        h.lat,
+        h.lng,
+        MapApp.lazyLevel
+    );
 
+    if (!feature) {
+        MapApp.clearGlobalHover();
+        return;
     }
+
+    const name = MapApp.getFeatureName(
+        feature,
+        MapApp.lazyLevel
+    );
+
+    if (!name || name === "Unknown") {
+        MapApp.clearGlobalHover();
+        return;
+    }
+
+    if (!h.tooltip) {
+        h.tooltip = document.createElement("div");
+        h.tooltip.className = "map-hover-tooltip";
+
+        Object.assign(h.tooltip.style, {
+            position: "absolute",
+            zIndex: "10000",
+            pointerEvents: "none",
+            padding: "8px 13px",
+            borderRadius: "13px",
+            background: "rgba(255,255,255,0.82)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            color: "#263238",
+            fontSize: "13px",
+            fontWeight: "600",
+            whiteSpace: "nowrap",
+            boxShadow: "0 6px 18px rgba(0,0,0,0.16)",
+            border: "1px solid rgba(255,255,255,0.75)",
+            transform: "translate(12px,12px)",
+            opacity: "0",
+            transition: "opacity 120ms ease"
+        });
+
+        MapApp.map.getContainer().appendChild(h.tooltip);
+    }
+
+    const point = MapApp.map.latLngToContainerPoint(
+        [h.lat, h.lng]
+    );
+
+    h.tooltip.textContent = name;
+    h.tooltip.style.left = point.x + "px";
+    h.tooltip.style.top = point.y + "px";
+    h.tooltip.style.opacity = "1";
+
+    h.feature = feature;
+    h.level = MapApp.lazyLevel;
+};
+
+MapApp.enableGlobalHover = function() {
+    if (!MapApp.map) return;
+
+    if (MapApp.globalHoverMove) {
+        MapApp.map.off(
+            "mousemove",
+            MapApp.globalHoverMove
+        );
+    }
+
+    if (MapApp.globalHoverOut) {
+        MapApp.map.off(
+            "mouseout",
+            MapApp.globalHoverOut
+        );
+    }
+
+    MapApp.globalHoverMove = function(e) {
+        const h = MapApp.hoverState;
+
+        h.lat = e.latlng.lat;
+        h.lng = e.latlng.lng;
+
+        if (h.frame) return;
+
+        h.frame = requestAnimationFrame(function() {
+            h.frame = null;
+
+            MapApp.showGlobalHover().catch(function(err) {
+                console.warn("Hover lookup failed:", err);
+            });
+        });
+    };
+
+    MapApp.globalHoverOut = function() {
+        const h = MapApp.hoverState;
+
+        h.lat = null;
+        h.lng = null;
+
+        MapApp.clearGlobalHover();
+    };
+
+    MapApp.map.on(
+        "mousemove",
+        MapApp.globalHoverMove
+    );
+
+    MapApp.map.on(
+        "mouseout",
+        MapApp.globalHoverOut
+    );
+};
+
+MapApp.enableGlobalHover();
+
+MapApp.bindHoverName = function(feature, layer, level) {
+    /* Disabled: global hover system handles all hover labels. */
 };
 
 
