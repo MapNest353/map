@@ -2543,8 +2543,8 @@ document.addEventListener("keydown", function (event) {
 
 /* =========================================================
    ZOOM-BASED BOUNDARY WEIGHTS
-   Thin state/district borders when zoomed far out,
-   restore normal thickness when zoomed in.
+   Clean hierarchy at world view, progressively stronger
+   when zooming in.
    ========================================================= */
 (function () {
 
@@ -2560,79 +2560,81 @@ document.addEventListener("keydown", function (event) {
             MapApp.lazyBoundaryLayers || {};
 
         /*
-         * Country stays strong at every zoom.
+         * COUNTRY
+         *
+         * World: 1.00
+         * Medium: 1.25
+         * Close:  1.60
          */
         if (layers.country) {
             layers.country.setStyle({
-                weight: 1.8,
-                opacity: 0.9
+                weight:
+                    zoom <= 4
+                        ? 1.0
+                        : zoom <= 6
+                            ? 1.25
+                            : 1.6,
+
+                opacity:
+                    zoom <= 4
+                        ? 0.72
+                        : zoom <= 6
+                            ? 0.82
+                            : 0.9
             });
         }
 
         /*
-         * FAR OUT
-         * World view: keep the map clean.
+         * STATE
+         *
+         * World: 0.30
+         * Medium: 0.55
+         * Close:  1.00
          */
-        if (zoom <= 4) {
+        if (layers.state) {
+            layers.state.setStyle({
+                weight:
+                    zoom <= 4
+                        ? 0.30
+                        : zoom <= 6
+                            ? 0.55
+                            : 1.0,
 
-            if (layers.state) {
-                layers.state.setStyle({
-                    weight: 0.45,
-                    opacity: 0.65
-                });
-            }
-
-            if (layers.district) {
-                layers.district.setStyle({
-                    weight: 0.20,
-                    opacity: 0.45
-                });
-            }
+                opacity:
+                    zoom <= 4
+                        ? 0.50
+                        : zoom <= 6
+                            ? 0.65
+                            : 0.78
+            });
+        }
 
         /*
-         * MEDIUM
+         * DISTRICT
+         *
+         * World: 0.12
+         * Medium: 0.25
+         * Close:  0.50
          */
-        } else if (zoom <= 6) {
+        if (layers.district) {
+            layers.district.setStyle({
+                weight:
+                    zoom <= 4
+                        ? 0.12
+                        : zoom <= 6
+                            ? 0.25
+                            : 0.50,
 
-            if (layers.state) {
-                layers.state.setStyle({
-                    weight: 0.75,
-                    opacity: 0.72
-                });
-            }
-
-            if (layers.district) {
-                layers.district.setStyle({
-                    weight: 0.38,
-                    opacity: 0.52
-                });
-            }
-
-        /*
-         * CLOSE
-         * Restore your normal boundary weights.
-         */
-        } else {
-
-            if (layers.state) {
-                layers.state.setStyle({
-                    weight: 1.2,
-                    opacity: 0.8
-                });
-            }
-
-            if (layers.district) {
-                layers.district.setStyle({
-                    weight: 0.65,
-                    opacity: 0.6
-                });
-            }
+                opacity:
+                    zoom <= 4
+                        ? 0.35
+                        : zoom <= 6
+                            ? 0.48
+                            : 0.58
+            });
         }
     }
 
-    /*
-     * Update continuously whenever the user zooms.
-     */
     MapApp.map.whenReady(function () {
 
         MapApp.map.on(
@@ -2641,20 +2643,14 @@ document.addEventListener("keydown", function (event) {
         );
 
         updateBoundaryWeights();
-
     });
 
-    /*
-     * Boundary layers may be created after this code
-     * runs, so also update whenever the level changes.
-     */
     const originalShowLazyLevel =
         MapApp.showLazyLevel;
 
     if (
         typeof originalShowLazyLevel === "function"
     ) {
-
         MapApp.showLazyLevel =
             async function () {
 
@@ -2671,3 +2667,153 @@ document.addEventListener("keydown", function (event) {
     }
 
 })();
+
+
+/* =========================================================
+   MAPNEST INITIAL BOUNDARY WEIGHT FIX
+   Apply zoom-dependent weights immediately when lazy
+   boundary layers are created, not only after zooming.
+   ========================================================= */
+(function () {
+
+    if (window.__MapNestInitialBoundaryWeightFix) return;
+    window.__MapNestInitialBoundaryWeightFix = true;
+
+    function applyBoundaryWeights() {
+
+        if (!window.MapApp || !MapApp.map) return;
+
+        const zoom = MapApp.map.getZoom();
+        const layers =
+            MapApp.lazyBoundaryLayers || {};
+
+        /*
+         * COUNTRY
+         */
+        if (layers.country) {
+            layers.country.setStyle({
+                weight:
+                    zoom <= 4
+                        ? 1.0
+                        : zoom <= 6
+                            ? 1.25
+                            : 1.6,
+
+                opacity:
+                    zoom <= 4
+                        ? 0.72
+                        : zoom <= 6
+                            ? 0.82
+                            : 0.9
+            });
+        }
+
+        /*
+         * STATE
+         */
+        if (layers.state) {
+            layers.state.setStyle({
+                weight:
+                    zoom <= 4
+                        ? 0.30
+                        : zoom <= 6
+                            ? 0.55
+                            : 1.0,
+
+                opacity:
+                    zoom <= 4
+                        ? 0.50
+                        : zoom <= 6
+                            ? 0.65
+                            : 0.78
+            });
+        }
+
+        /*
+         * DISTRICT
+         */
+        if (layers.district) {
+            layers.district.setStyle({
+                weight:
+                    zoom <= 4
+                        ? 0.12
+                        : zoom <= 6
+                            ? 0.25
+                            : 0.50,
+
+                opacity:
+                    zoom <= 4
+                        ? 0.35
+                        : zoom <= 6
+                            ? 0.48
+                            : 0.58
+            });
+        }
+    }
+
+    /*
+     * Make the function available to the map system.
+     */
+    MapApp.updateBoundaryWeights =
+        applyBoundaryWeights;
+
+    /*
+     * Apply whenever the user zooms.
+     */
+    if (MapApp.map) {
+        MapApp.map.on(
+            "zoomend",
+            applyBoundaryWeights
+        );
+    }
+
+    /*
+     * IMPORTANT:
+     * Boundary layers are created asynchronously.
+     * Wrap createLazyBoundaryLayer so the correct
+     * thickness is applied immediately after creation.
+     */
+    const originalCreate =
+        MapApp.createLazyBoundaryLayer;
+
+    if (
+        typeof originalCreate === "function"
+    ) {
+
+        MapApp.createLazyBoundaryLayer =
+            async function(level) {
+
+                const result =
+                    await originalCreate.apply(
+                        MapApp,
+                        arguments
+                    );
+
+                applyBoundaryWeights();
+
+                return result;
+            };
+    }
+
+    /*
+     * Also keep checking briefly during initial startup
+     * so layers created during the first render receive
+     * the correct world-view thickness immediately.
+     */
+    let attempts = 0;
+
+    const startupTimer =
+        setInterval(function() {
+
+            applyBoundaryWeights();
+
+            attempts++;
+
+            if (attempts >= 30) {
+                clearInterval(startupTimer);
+            }
+
+        }, 100);
+
+})();
+
