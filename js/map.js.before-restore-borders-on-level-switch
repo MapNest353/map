@@ -1179,40 +1179,6 @@ MapApp.addLazyFeature = function(feature, level) {
 };
 
 MapApp.showLazyLevel = async function(level) {
-    
-    /*
-     * Restore all temporarily hidden selected
-     * polygon borders before changing level.
-     *
-     * The fill/color remains saved.
-     * Only the border is restored.
-     */
-    if (MapApp.lazyBoundaryLayers) {
-        Object.keys(
-            MapApp.lazyBoundaryLayers
-        ).forEach(function(name) {
-
-            const boundary =
-                MapApp.lazyBoundaryLayers[name];
-
-            if (!boundary) return;
-
-            boundary.eachLayer(function(layer) {
-
-                if (
-                    layer._originalSelectedBoundaryStyle
-                ) {
-                    layer.setStyle(
-                        layer._originalSelectedBoundaryStyle
-                    );
-
-                    delete
-                        layer._originalSelectedBoundaryStyle;
-                }
-            });
-        });
-    }
-
 
     MapApp.updateLevelSelection(level);
 
