@@ -1948,72 +1948,171 @@ MapApp.search = async function(query) {
 
 
 MapApp.zoomToSearchResult = async function(result) {
-    if (!result || !result.feature || !result.level) return;
 
-    try {
-        /*
-         * Switch to the correct lazy level.
-         */
-        if (result.level === "country") {
-            await MapApp.showCountry();
-        } else if (result.level === "state") {
-            await MapApp.showStates();
-        } else if (result.level === "district") {
-            await MapApp.showDistricts();
-        } else {
+    const levelIndex = {
+        country: 0,
+        state: 1,
+        district: 2
+    };
+
+    const index =
+        levelIndex[result.level];
+
+    if (index === undefined) return;
+
+    /*
+     * Load the complete level so the normal map layer
+     * remains intact.
+     */
+
+    if (result.level === "country") {
+        await MapApp.showCountry();
+    } else if (result.level === "state") {
+        await MapApp.showStates();
+    } else if (result.level === "district") {
+        await MapApp.showDistricts();
+    }
+
+    let targetLayer = null;
+
+    /*
+     * Find the matching feature in the currently
+     * displayed Leaflet layer.
+     */
+
+    const layer =
+        result.level === "country"
+            ? MapApp.countryLayer
+            : result.level === "state"
+                ? MapApp.stateLayer
+                : MapApp.districtLayer;
+
+    if (!layer) return;
+
+    layer.eachLayer(function(l) {
+
+        if (
+            l.feature &&
+            l.feature === result.feature
+        ) {
+            targetLayer = l;
+        }
+
+    });
+
+    /*
+     * Object identity may differ after reloading.
+     * Therefore compare the resolved English names too.
+     */
+
+    if (!targetLayer) {
+
+        layer.eachLayer(function(l) {
+
+            if (!l.feature) return;
+
+            const a =
+                MapApp.searchNormalize(
+                    MapApp.getFeatureName(
+                        l.feature,
+                        result.level
+                    )
+                );
+
+            const b =
+                MapApp.searchNormalize(
+                    result.name
+                );
+
+            if (a === b && !targetLayer) {
+                targetLayer = l;
+            }
+
+        });
+    }
+
+    if (!targetLayer) return;
+
+    const bounds =
+        targetLayer.getBounds();
+
+    if (!bounds.isValid()) return;
+
+    MapApp.map.fitBounds(bounds, {
+        padding: [80, 80],
+        maxZoom:
+            result.level === "country"
+                ? 6
+                : result.level === "state"
+                    ? 8
+                    : 11,
+        animate: true
+    });
+
+    /*
+     * Highlight the searched feature temporarily.
+     */
+
+    targetLayer.setStyle({
+        color: "#111111",
+        weight:
+            (MapLayers.styles[result.level] || {}).weight
+                ? MapLayers.styles[result.level].weight + 2
+                : 3,
+        fillOpacity: 0.65
+    });
+
+    if (targetLayer.bringToFront) {
+        targetLayer.bringToFront();
+    }
+
+    targetLayer.bindTooltip(
+        result.name,
+        {
+            sticky: true,
+            direction: "top",
+            opacity: 0.95
+        }
+    ).openTooltip();
+
+    setTimeout(function() {
+
+        if (
+            !targetLayer ||
+            !targetLayer.setStyle
+        ) {
             return;
         }
 
         /*
-         * Search results contain the actual GeoJSON feature.
-         * Use it directly instead of relying on the old
-         * countryLayer/stateLayer/districtLayer system.
+         * If this feature already has a saved color,
+         * restore that color after the search highlight.
          */
-        const temporaryLayer = L.geoJSON(result.feature);
-        const bounds = temporaryLayer.getBounds();
+        if (
+            MapControls &&
+            MapControls.restoreLayerColors
+        ) {
 
-        if (!bounds.isValid()) return;
+            MapControls.restoreLayerColors(
+                layer,
+                result.level
+            );
 
-        MapApp.map.fitBounds(bounds, {
-            padding: [80, 80],
-            maxZoom:
-                result.level === "country"
-                    ? 6
-                    : result.level === "state"
-                        ? 8
-                        : 11,
-            animate: true,
-            duration: 0.7
-        });
+        } else {
 
-        /*
-         * Temporary search highlight.
-         */
-        temporaryLayer.setStyle({
-            color: "#111111",
-            weight:
-                (MapLayers.styles[result.level] || {}).weight
-                    ? MapLayers.styles[result.level].weight + 2
-                    : 3,
-            fillOpacity: 0.65
-        });
+            targetLayer.setStyle(
+                MapLayers.styles[
+                    result.level
+                ]
+            );
+        }
 
-        temporaryLayer.addTo(MapApp.map);
-        temporaryLayer.bringToFront();
-
-        setTimeout(function() {
-            if (MapApp.map.hasLayer(temporaryLayer)) {
-                MapApp.map.removeLayer(temporaryLayer);
-            }
-        }, 1800);
-
-    } catch (error) {
-        console.error("Search zoom failed:", error);
-    }
+    }, 1800);
 };
 
 
 MapApp.initSearch = function() {
+
     const input =
         document.getElementById("search");
 
@@ -2026,64 +2125,23 @@ MapApp.initSearch = function() {
     }
 
     let currentResults = [];
-    let selectedIndex = -1;
 
     function clearResults() {
         resultsBox.innerHTML = "";
         resultsBox.style.display = "none";
-        selectedIndex = -1;
-    }
-
-    function updateSelection() {
-        const rows =
-            resultsBox.querySelectorAll(".search-result");
-
-        rows.forEach(function(row, index) {
-            if (index === selectedIndex) {
-                row.style.background = "rgba(0,0,0,0.08)";
-                row.style.borderRadius = "8px";
-            } else {
-                row.style.background = "";
-                row.style.borderRadius = "";
-            }
-        });
-
-        if (
-            selectedIndex >= 0 &&
-            selectedIndex < rows.length
-        ) {
-            rows[selectedIndex].scrollIntoView({
-                block: "nearest"
-            });
-        }
-    }
-
-    function selectResult(index) {
-        if (
-            index < 0 ||
-            index >= currentResults.length
-        ) {
-            return;
-        }
-
-        const item = currentResults[index];
-
-        input.value = item.name;
-        clearResults();
-
-        MapApp.zoomToSearchResult(item);
     }
 
     function showResults(items) {
+
         resultsBox.innerHTML = "";
-        selectedIndex = -1;
 
         if (!items.length) {
             resultsBox.style.display = "none";
             return;
         }
 
-        items.forEach(function(item, index) {
+        items.forEach(function(item) {
+
             const row =
                 document.createElement("div");
 
@@ -2094,8 +2152,15 @@ MapApp.initSearch = function() {
                 `<span class="search-result-level">${item.level}</span>`;
 
             row.addEventListener("mousedown", function(event) {
+
                 event.preventDefault();
-                selectResult(index);
+
+                input.value = item.name;
+
+                clearResults();
+
+                MapApp.zoomToSearchResult(item);
+
             });
 
             resultsBox.appendChild(row);
@@ -2105,9 +2170,8 @@ MapApp.initSearch = function() {
     }
 
     input.addEventListener("input", async function() {
-        const query = input.value.trim();
 
-        selectedIndex = -1;
+        const query = input.value.trim();
 
         if (!query) {
             clearResults();
@@ -2115,87 +2179,63 @@ MapApp.initSearch = function() {
         }
 
         try {
+
             currentResults =
                 await MapApp.search(query);
 
             showResults(currentResults);
 
         } catch (error) {
+
             console.error("Search error:", error);
             clearResults();
+
         }
     });
 
-    input.addEventListener("keydown", function(event) {
+    input.addEventListener("keydown", async function(event) {
 
-        /*
-         * DOWN ARROW
-         * Move to next suggestion.
-         */
-        if (event.key === "ArrowDown") {
-            if (!currentResults.length) return;
+        if (event.key !== "Enter") return;
 
-            event.preventDefault();
+        event.preventDefault();
 
-            selectedIndex =
-                selectedIndex < currentResults.length - 1
-                    ? selectedIndex + 1
-                    : 0;
+        const query =
+            input.value.trim();
 
-            updateSelection();
-            return;
-        }
+        if (!query) return;
 
-        /*
-         * UP ARROW
-         * Move to previous suggestion.
-         */
-        if (event.key === "ArrowUp") {
-            if (!currentResults.length) return;
+        try {
 
-            event.preventDefault();
+            const results =
+                await MapApp.search(query);
 
-            selectedIndex =
-                selectedIndex > 0
-                    ? selectedIndex - 1
-                    : currentResults.length - 1;
+            if (results.length) {
 
-            updateSelection();
-            return;
-        }
+                input.value =
+                    results[0].name;
 
-        /*
-         * ESCAPE
-         */
-        if (event.key === "Escape") {
-            event.preventDefault();
-            clearResults();
-            return;
-        }
+                clearResults();
 
-        /*
-         * ENTER
-         */
-        if (event.key === "Enter") {
-            if (!currentResults.length) return;
-
-            event.preventDefault();
-
-            if (selectedIndex < 0) {
-                selectedIndex = 0;
+                await MapApp.zoomToSearchResult(
+                    results[0]
+                );
             }
 
-            selectResult(selectedIndex);
+        } catch (error) {
+
+            console.error("Search error:", error);
+
         }
     });
 
     input.addEventListener("blur", function() {
+
         setTimeout(clearResults, 150);
+
     });
 
     console.log("✓ Global map search ready");
 };
-
 
 MapApp.initSearch();
 
