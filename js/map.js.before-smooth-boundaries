@@ -161,7 +161,7 @@ MapApp.clearOldDataCache = function() {
     }
 };
 
-MapApp.clearOldDataCache();
+/* Persistent GeoJSON cache: keep it across page reloads. */
 
 MapApp.dataCache = {};
 MapApp.dataPromises = {};
@@ -884,12 +884,6 @@ MapApp.createLazyLayer = function(
 
         }).addTo(MapApp.map);
 
-    MapApp.setSelectedBoundaryHidden(
-        feature,
-        level,
-        true
-    );
-
     layer.eachLayer(function(child) {
         child._mapSelected = true;
 
@@ -973,18 +967,6 @@ MapApp.enableLazyClicks = function(level) {
                         );
                     }
 
-                    MapApp.setSelectedBoundaryHidden(
-                        feature,
-                        level,
-                        false
-                    );
-
-                    MapApp.setSelectedBoundaryHidden(
-                        feature,
-                        level,
-                        false
-                    );
-
                     MapApp.map.removeLayer(
                         existing.layer
                     );
@@ -1055,69 +1037,24 @@ MapApp.enableLazyClicks = function(level) {
 
 MapApp.lazyLayers = MapApp.lazyLayers || [];
 
-
-
-MapApp.setSelectedBoundaryHidden = function(feature, level, hidden) {
-    const boundaryLayers = MapApp.lazyBoundaryLayers || {};
-    const boundary = boundaryLayers[level];
-
-    if (!boundary) return;
-
-    const selectedKey =
-        MapControls.getFeatureKey(feature, level);
-
-    boundary.eachLayer(function(layer) {
-        if (!layer.feature) return;
-
-        const layerKey =
-            MapControls.getFeatureKey(
-                layer.feature,
-                level
-            );
-
-        if (layerKey !== selectedKey) return;
-
-        if (hidden) {
-            if (!layer._originalSelectedBoundaryStyle) {
-                layer._originalSelectedBoundaryStyle = {
-                    color: layer.options.color,
-                    weight: layer.options.weight,
-                    opacity: layer.options.opacity
-                };
-            }
-
-            layer.setStyle({
-                color: "transparent",
-                weight: 0,
-                opacity: 0
-            });
-        } else if (layer._originalSelectedBoundaryStyle) {
-            layer.setStyle(
-                layer._originalSelectedBoundaryStyle
-            );
-            delete layer._originalSelectedBoundaryStyle;
-        }
-    });
-};
-
 MapApp.addLazyFeature = function(feature, level) {
 
     const styles = {
         country: {
-            color: "transparent",
-            weight: 0,
+            color: "#222",
+            weight: 2,
             fillColor: "#3388ff",
             fillOpacity: 0.65
         },
         state: {
-            color: "transparent",
-            weight: 0,
+            color: "#222",
+            weight: 2,
             fillColor: "#44aa55",
             fillOpacity: 0.65
         },
         district: {
-            color: "transparent",
-            weight: 0,
+            color: "#222",
+            weight: 2,
             fillColor: "#ffaa44",
             fillOpacity: 0.65
         }
@@ -1153,12 +1090,6 @@ MapApp.addLazyFeature = function(feature, level) {
         }
     }).addTo(MapApp.map);
 
-    MapApp.setSelectedBoundaryHidden(
-        feature,
-        level,
-        true
-    );
-
     layer.eachLayer(function(l) {
         l._mapSelected = true;
 
@@ -1178,220 +1109,252 @@ MapApp.addLazyFeature = function(feature, level) {
     return layer;
 };
 
+/*
+ * MAPNEST — CANVAS BOUNDARIES + LAZY LEAFLET
+ *
+ * GeoJSON is loaded/cached normally.
+ * Boundaries are drawn on one Canvas.
+ * Leaflet is created ONLY for selected/colored features.
+ */
+
+MapApp.boundaryCanvas = null;
+MapApp.boundaryDrawReady = false;
+
+MapApp.ensureBoundaryCanvas = function() {
+    if (MapApp.boundaryCanvas) return MapApp.boundaryCanvas;
+
+    const canvas = document.createElement("canvas");
+
+    canvas.style.position = "absolute";
+    canvas.style.left = "0";
+    canvas.style.top = "0";
+    canvas.style.width = "100%";
+    canvas.style.height = "100%";
+    canvas.style.pointerEvents = "none";
+    canvas.style.zIndex = "350";
+
+    MapApp.map.getContainer().appendChild(canvas);
+
+    MapApp.boundaryCanvas = canvas;
+
+    if (!MapApp.boundaryDrawReady) {
+        MapApp.boundaryDrawReady = true;
+
+        const redraw = function() {
+            if (MapApp.lazyLevel) {
+                MapApp.drawLazyBoundaries();
+            }
+        };
+
+        MapApp.map.on("zoomend moveend resize", redraw);
+        window.addEventListener("resize", redraw);
+    }
+
+    return canvas;
+};
+
+MapApp.drawLazyBoundaries = async function() {
+    const canvas = MapApp.ensureBoundaryCanvas();
+    const map = MapApp.map;
+    const size = map.getSize();
+
+    const dpr = window.devicePixelRatio || 1;
+
+    canvas.width = Math.max(1, Math.round(size.x * dpr));
+    canvas.height = Math.max(1, Math.round(size.y * dpr));
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size.x, size.y);
+
+    const required = {
+        country: ["country"],
+        state: ["country", "state"],
+        district: ["country", "state", "district"]
+    };
+
+    const levels = required[MapApp.lazyLevel] || [];
+
+    const styles = {
+        country: {
+            color: "#333333",
+            weight: 1.8,
+            opacity: 0.9
+        },
+        state: {
+            color: "#666666",
+            weight: 1.2,
+            opacity: 0.8
+        },
+        district: {
+            color: "#999999",
+            weight: 0.65,
+            opacity: 0.6
+        }
+    };
+
+    for (const level of levels) {
+        const data = await MapApp.loadAll(level);
+
+        if (!data || !data.features) continue;
+
+        const style = styles[level];
+
+        ctx.save();
+        ctx.strokeStyle = style.color;
+        ctx.globalAlpha = style.opacity;
+        ctx.lineWidth = style.weight;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+
+        for (const feature of data.features) {
+            const geometry = feature.geometry;
+            if (!geometry) continue;
+
+            const drawRing = function(ring) {
+                if (!ring || ring.length < 2) return;
+
+                ctx.beginPath();
+
+                for (let i = 0; i < ring.length; i++) {
+                    const point = ring[i];
+
+                    if (
+                        !Array.isArray(point) ||
+                        point.length < 2
+                    ) continue;
+
+                    const projected =
+                        map.latLngToContainerPoint(
+                            [point[1], point[0]]
+                        );
+
+                    if (i === 0) {
+                        ctx.moveTo(
+                            projected.x,
+                            projected.y
+                        );
+                    } else {
+                        ctx.lineTo(
+                            projected.x,
+                            projected.y
+                        );
+                    }
+                }
+
+                ctx.stroke();
+            };
+
+            if (geometry.type === "Polygon") {
+                for (const ring of geometry.coordinates || []) {
+                    drawRing(ring);
+                }
+            }
+
+            else if (geometry.type === "MultiPolygon") {
+                for (
+                    const polygon
+                    of geometry.coordinates || []
+                ) {
+                    for (const ring of polygon || []) {
+                        drawRing(ring);
+                    }
+                }
+            }
+
+            else if (geometry.type === "LineString") {
+                drawRing(geometry.coordinates);
+            }
+
+            else if (geometry.type === "MultiLineString") {
+                for (
+                    const line
+                    of geometry.coordinates || []
+                ) {
+                    drawRing(line);
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+};
+
 MapApp.showLazyLevel = async function(level) {
 
     MapApp.updateLevelSelection(level);
 
-    MapApp.lazyBoundaryLayers =
-        MapApp.lazyBoundaryLayers || {};
-
-    /*
-     * IMPORTANT:
-     *
-     * Clicking the SAME level button again must
-     * NOT destroy the current selections.
-     */
     if (MapApp.lazyLevel === level) {
         return;
     }
 
     /*
-     * Remove only the currently displayed
-     * colored selection polygons.
-     *
-     * Saved colors remain in localStorage.
+     * Remove currently displayed colored Leaflet
+     * features. Their saved colors remain stored.
      */
     if (MapApp.lazyLayers) {
-
         MapApp.lazyLayers.forEach(function(item) {
-
             if (
                 item.layer &&
                 MapApp.map.hasLayer(item.layer)
             ) {
                 MapApp.map.removeLayer(item.layer);
             }
-
         });
-
     }
 
     MapApp.lazyLayers = [];
 
+    /*
+     * Set level BEFORE drawing boundaries.
+     */
+    MapApp.lazyLevel = level;
 
     /*
-     * Boundary hierarchy:
+     * Draw boundaries with Canvas.
      *
-     * Country  → Country
-     * States   → Country + States
-     * District → Country + States + Districts
+     * IMPORTANT:
+     * No L.geoJSON() is used here.
+     * Therefore zero Leaflet boundary polygons
+     * are constructed.
      */
-    const required = {
-        country: [
-            "country"
-        ],
+    await MapApp.drawLazyBoundaries();
 
-        state: [
-            "country",
-            "state"
-        ],
+    /*
+     * Restore ONLY previously colored features.
+     * These are the only features allowed to become
+     * Leaflet polygons automatically.
+     */
+    const data = await MapApp.loadAll(level);
+    const saved = MapControls.loadColors();
 
-        district: [
-            "country",
-            "state",
-            "district"
-        ]
-    };
+    for (const feature of data.features || []) {
 
-    const keep =
-        required[level];
-
-    try {
-
-        /*
-         * Remove boundary levels that are
-         * no longer required.
-         */
-        [
-            "country",
-            "state",
-            "district"
-        ].forEach(function(name) {
-
-            if (
-                !keep.includes(name) &&
-                MapApp.lazyBoundaryLayers[name]
-            ) {
-
-                if (
-                    MapApp.map.hasLayer(
-                        MapApp.lazyBoundaryLayers[name]
-                    )
-                ) {
-
-                    MapApp.map.removeLayer(
-                        MapApp.lazyBoundaryLayers[name]
-                    );
-
-                }
-
-            }
-
-        });
-
-
-        /*
-         * Create missing boundary layers.
-         */
-        for (const name of keep) {
-
-            await MapApp.createLazyBoundaryLayer(
-                name
-            );
-
-        }
-
-
-        /*
-         * Restore the saved colored regions
-         * for the level we're entering.
-         *
-         * Only saved regions become Leaflet
-         * polygons. Everything else remains
-         * boundary-only.
-         */
-        const data =
-            await MapApp.loadAll(level);
-
-        const saved =
-            MapControls.loadColors();
-
-        for (
-            const feature of
-            (data.features || [])
-        ) {
-
-            const key =
-                MapControls.getFeatureKey(
-                    feature,
-                    level
-                );
-
-            if (!saved[key])
-                continue;
-
-            MapApp.createLazyLayer(
+        const key =
+            MapControls.getFeatureKey(
                 feature,
-                level,
-                saved[key]
+                level
             );
-        }
 
+        if (!saved[key]) continue;
 
-        /*
-         * Keep boundary hierarchy visible.
-         */
-        if (
-            MapApp.lazyBoundaryLayers.country &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.country
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.country.bringToFront();
-        }
-
-        if (
-            MapApp.lazyBoundaryLayers.state &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.state
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.state.bringToFront();
-        }
-
-        if (
-            MapApp.lazyBoundaryLayers.district &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.district
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.district.bringToFront();
-        }
-
-
-        /*
-         * Country boundary remains strongest.
-         */
-        if (
-            MapApp.lazyBoundaryLayers.country &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.country
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.country.bringToFront();
-        }
-
-
-        MapApp.lazyLevel = level;
-
-        MapApp.enableLazyClicks(
-            level
+        MapApp.createLazyLayer(
+            feature,
+            level,
+            saved[key]
         );
-
-    } catch (error) {
-
-        console.error(
-            "LAZY LEVEL LOAD ERROR:",
-            error
-        );
-
-    } finally {
-
-        MapApp.hideLoading();
-
     }
-};
 
+    /*
+     * Re-enable click detection.
+     * Clicking an uncolored feature creates exactly
+     * one Leaflet polygon.
+     */
+    MapApp.enableLazyClicks(level);
+
+    MapApp.hideLoading();
+};
 
 /* =========================================================
    END LAZY SYSTEM

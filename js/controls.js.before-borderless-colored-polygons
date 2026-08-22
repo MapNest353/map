@@ -348,8 +348,8 @@ MapControls.restoreLayerColors = function(layer, level) {
         if (!colors[key]) return;
 
         item.setStyle({
-            color: "transparent",
-            weight: 0,
+            color: colors[key].color,
+            weight: colors[key].weight,
             fillColor: colors[key].fillColor,
             fillOpacity: colors[key].fillOpacity
         });
@@ -555,9 +555,10 @@ MapControls.handleClick = function(
 
         layer.setStyle({
 
-            color: "transparent",
+            color: "#111111",
 
-            weight: 0,
+            weight:
+                MapLayers.styles[level].weight + 1,
 
             fillColor:
                 MapLayers.styles[level].fillColor,
@@ -572,8 +573,9 @@ MapControls.handleClick = function(
             layer.feature,
             level,
             {
-                color: "transparent",
-                weight: 0,
+                color: "#111111",
+                weight:
+                    MapLayers.styles[level].weight + 1,
                 fillColor:
                     MapLayers.styles[level].fillColor,
                 fillOpacity: 0.65

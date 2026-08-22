@@ -979,12 +979,6 @@ MapApp.enableLazyClicks = function(level) {
                         false
                     );
 
-                    MapApp.setSelectedBoundaryHidden(
-                        feature,
-                        level,
-                        false
-                    );
-
                     MapApp.map.removeLayer(
                         existing.layer
                     );
@@ -1055,47 +1049,37 @@ MapApp.enableLazyClicks = function(level) {
 
 MapApp.lazyLayers = MapApp.lazyLayers || [];
 
-
-
 MapApp.setSelectedBoundaryHidden = function(feature, level, hidden) {
-    const boundaryLayers = MapApp.lazyBoundaryLayers || {};
-    const boundary = boundaryLayers[level];
+    const boundaries = MapApp.lazyBoundaryLayers || {};
+    const boundary = boundaries[level];
 
     if (!boundary) return;
 
-    const selectedKey =
-        MapControls.getFeatureKey(feature, level);
+    const key = MapControls.getFeatureKey(feature, level);
 
-    boundary.eachLayer(function(layer) {
-        if (!layer.feature) return;
+    boundary.eachLayer(function(child) {
+        if (!child.feature) return;
 
-        const layerKey =
-            MapControls.getFeatureKey(
-                layer.feature,
-                level
-            );
+        const childKey =
+            MapControls.getFeatureKey(child.feature, level);
 
-        if (layerKey !== selectedKey) return;
+        if (childKey !== key) return;
 
         if (hidden) {
-            if (!layer._originalSelectedBoundaryStyle) {
-                layer._originalSelectedBoundaryStyle = {
-                    color: layer.options.color,
-                    weight: layer.options.weight,
-                    opacity: layer.options.opacity
+            if (!child._mapOriginalBorder) {
+                child._mapOriginalBorder = {
+                    color: child.options.color,
+                    weight: child.options.weight,
+                    opacity: child.options.opacity
                 };
             }
 
-            layer.setStyle({
-                color: "transparent",
+            child.setStyle({
                 weight: 0,
                 opacity: 0
             });
-        } else if (layer._originalSelectedBoundaryStyle) {
-            layer.setStyle(
-                layer._originalSelectedBoundaryStyle
-            );
-            delete layer._originalSelectedBoundaryStyle;
+        } else if (child._mapOriginalBorder) {
+            child.setStyle(child._mapOriginalBorder);
         }
     });
 };
@@ -1152,12 +1136,6 @@ MapApp.addLazyFeature = function(feature, level) {
             /* Hover handled by global hover system. */
         }
     }).addTo(MapApp.map);
-
-    MapApp.setSelectedBoundaryHidden(
-        feature,
-        level,
-        true
-    );
 
     layer.eachLayer(function(l) {
         l._mapSelected = true;

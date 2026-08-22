@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="icon" type="image/svg+xml" href="assets/mapnest-favicon.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>World Map</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html, body, #map {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+#map {
+    background: #ffffff;
+}
+
+/* SEARCH */
+
+#searchContainer {
+    position: absolute;
+    z-index: 1000;
+    top: 15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    max-width: calc(100% - 30px);
+}
+
+#search {
+    width: 100%;
+    padding: 11px 14px;
+    border: none;
+    border-radius: 8px;
+    outline: none;
+    font-size: 15px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+#results {
+    margin-top: 5px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    display: none;
+}
+
+.result {
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.result:hover {
+    background: #eee;
+}
+
+/* LEVEL BUTTON */
+
+#levelButton {
+    position: absolute;
+    z-index: 1000;
+    top: 15px;
+    right: 15px;
+    padding: 11px 16px;
+    border: none;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+#levelButton:hover {
+    background: #eee;
+}
+
+/* INFO */
+
+#info {
+    position: absolute;
+    z-index: 1000;
+    bottom: 20px;
+    left: 20px;
+    padding: 12px 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    font-size: 13px;
+}
+
+#infoName {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+#map-version {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: rgba(255,255,255,.92);
+    padding: 5px 9px;
+    border-radius: 5px;
+    font-size: 11px;
+    color: #555;
+    box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+</style>
+    <link rel="stylesheet" href="css/style.css?v=2026081901">
+<link rel="stylesheet" href="css/glossy.css?v=local"></head>
+
+<body>
+
+<!-- MAPNEST COMMAND CENTER -->
+<div class="mapnest-command-center">
+
+
+    <button id="mn-home" title="Reset view">
+        <span class="mn-icon">⌂</span>
+        <span class="mn-label">Home</span>
+    </button>
+
+    <span class="divider"></span>
+
+    <button id="mn-country" title="Countries">
+        <span class="mn-icon">◉</span>
+        <span class="mn-label">Countries</span>
+    </button>
+
+    <button id="mn-state" title="States">
+        <span class="mn-icon">◈</span>
+        <span class="mn-label">States</span>
+    </button>
+
+    <button id="mn-district" title="Districts">
+        <span class="mn-icon">◇</span>
+        <span class="mn-label">Districts</span>
+    </button>
+
+    <span class="divider"></span>
+
+    <div id="mn-project-slot"></div>
+
+    <button id="mn-reset" title="Reset markings">
+        <span class="mn-icon">↺</span>
+        <span class="mn-label">Reset</span>
+    </button>
+
+</div>
+
+<!-- MAPNEST WELCOME -->
+
+<!-- MAPNEST CUSTOM DIALOG SYSTEM -->
+<div id="mapnest-modal-root" aria-hidden="true">
+    <div id="mapnest-modal-backdrop"></div>
+
+    <div id="mapnest-modal" role="dialog" aria-modal="true">
+
+        <div id="mapnest-modal-icon">✦</div>
+
+        <div id="mapnest-modal-title"></div>
+        <div id="mapnest-modal-message"></div>
+
+        <input
+            id="mapnest-modal-input"
+            type="text"
+            autocomplete="off"
+        >
+
+        <div id="mapnest-modal-actions">
+            <button id="mapnest-modal-cancel">
+                Cancel
+            </button>
+
+            <button id="mapnest-modal-confirm">
+                Confirm
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+(function () {
+
+    const root =
+        document.getElementById("mapnest-modal-root");
+
+    const title =
+        document.getElementById("mapnest-modal-title");
+
+    const message =
+        document.getElementById("mapnest-modal-message");
+
+    const input =
+        document.getElementById("mapnest-modal-input");
+
+    const cancel =
+        document.getElementById("mapnest-modal-cancel");
+
+    const confirm =
+        document.getElementById("mapnest-modal-confirm");
+
+    let resolver = null;
+
+    function close(value) {
+
+        root.classList.remove("open");
+        root.setAttribute("aria-hidden", "true");
+
+        const r = resolver;
+        resolver = null;
+
+        if (r) r(value);
+    }
+
+    function open(type, heading, text, confirmText, value) {
+
+        title.textContent = heading;
+        message.textContent = text || "";
+
+        confirm.textContent =
+            confirmText || "Confirm";
+
+        input.value = value || "";
+
+        input.style.display =
+            type === "prompt" ? "block" : "none";
+
+        cancel.style.display = "block";
+
+        root.classList.add("open");
+        root.setAttribute("aria-hidden", "false");
+
+        setTimeout(function () {
+
+            if (type === "prompt")
+                input.focus();
+            else
+                confirm.focus();
+
+        }, 160);
+    }
+
+    window.MapNestModal = {
+
+        confirm: function (
+            heading,
+            text,
+            confirmText
+        ) {
+
+            return new Promise(function (resolve) {
+
+                resolver = resolve;
+
+                open(
+                    "confirm",
+                    heading,
+                    text,
+                    confirmText
+                );
+
+            });
+
+        },
+
+        prompt: function (
+            heading,
+            text,
+            defaultValue
+        ) {
+
+            return new Promise(function (resolve) {
+
+                resolver = function (value) {
+                    resolve(value);
+                };
+
+                open(
+                    "prompt",
+                    heading,
+                    text,
+                    "Create",
+                    defaultValue || ""
+                );
+
+            });
+
+        },
+
+        alert: function (
+            heading,
+            text
+        ) {
+
+            return new Promise(function (resolve) {
+
+                resolver = resolve;
+
+                cancel.style.display = "none";
+
+                open(
+                    "alert",
+                    heading,
+                    text,
+                    "OK"
+                );
+
+            });
+
+        }
+
+    };
+
+    confirm.addEventListener(
+        "click",
+        function () {
+
+            if (input.style.display !== "none") {
+                const value =
+                    input.value.trim();
+
+                close(value || null);
+            } else {
+                close(true);
+            }
+
+        }
+    );
+
+    cancel.addEventListener(
+        "click",
+        function () {
+            close(false);
+        }
+    );
+
+    document.getElementById(
+        "mapnest-modal-backdrop"
+    ).addEventListener(
+        "click",
+        function () {
+            close(false);
+        }
+    );
+
+    document.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (!root.classList.contains("open"))
+                return;
+
+            if (event.key === "Escape") {
+                event.preventDefault();
+                close(false);
+            }
+
+            if (
+                event.key === "Enter" &&
+                input.style.display !== "none" &&
+                document.activeElement === input
+            ) {
+                event.preventDefault();
+                confirm.click();
+            }
+
+        }
+    );
+
+})();
+</script>
+
+<div id="mapnest-welcome">
+    <div class="mapnest-welcome-card">
+        <img
+            class="mapnest-welcome-logo"
+            src="assets/mapnest-logo.svg"
+            alt="MapNest"
+        >
+
+
+        <div class="mapnest-welcome-mark">✦</div>
+
+        <div class="mapnest-welcome-title">
+            Welcome to MapNest
+        </div>
+
+        <div class="mapnest-welcome-subtitle">
+            Your personal world map.
+        </div>
+
+        <div class="mapnest-welcome-grid">
+
+            <div>
+                <span>🌍</span>
+                <strong>Explore</strong>
+                <small>Navigate countries, states and districts.</small>
+            </div>
+
+            <div>
+                <span>✦</span>
+                <strong>Mark</strong>
+                <small>Click a region to add it to your map.</small>
+            </div>
+
+            <div>
+                <span>◌</span>
+                <strong>Projects</strong>
+                <small>Keep different maps completely separate.</small>
+            </div>
+
+        </div>
+
+        <button id="mapnest-welcome-start">
+            Start exploring
+        </button>
+
+    </div>
+</div>
+
+
+<!-- MAPNEST INSIGHTS -->
+<button id="mapnest-insights-toggle" aria-label="Open MapNest Insights">
+    <span class="mn-insights-orb-core">◔</span>
+    <span class="mn-insights-orb-ring"></span>
+    <small>Insights</small>
+</button>
+
+<aside id="mapnest-insights" aria-hidden="true">
+
+    <div class="mn-insights-head">
+        <div>
+            <div class="mn-insights-eyebrow">MAPNEST</div>
+            <h2>Insights</h2>
+            <p id="mn-insights-project">My Map</p>
+        </div>
+
+        <button id="mn-insights-close" aria-label="Close">×</button>
+    </div>
+
+    <div class="mn-insights-overview">
+
+        <div class="mn-stat-card mn-stat-wide">
+            <div class="mn-stat-top">
+                <span>Overall exploration</span>
+                <strong id="mn-total-percent">0%</strong>
+            </div>
+
+            <div class="mn-progress">
+                <i id="mn-total-progress"></i>
+            </div>
+
+            <div class="mn-stat-bottom">
+                <span id="mn-total-marked">0 marked</span>
+                <span id="mn-total-regions">0 regions</span>
+            </div>
+        </div>
+
+        <div class="mn-stat-card">
+            <div class="mn-stat-symbol">🌍</div>
+            <strong id="mn-country-count">0</strong>
+            <span>Countries</span>
+            <small id="mn-country-percent">0%</small>
+        </div>
+
+        <div class="mn-stat-card">
+            <div class="mn-stat-symbol">◈</div>
+            <strong id="mn-state-count">0</strong>
+            <span>States</span>
+            <small id="mn-state-percent">0%</small>
+        </div>
+
+        <div class="mn-stat-card">
+            <div class="mn-stat-symbol">◇</div>
+            <strong id="mn-district-count">0</strong>
+            <span>Districts</span>
+            <small id="mn-district-percent">0%</small>
+        </div>
+
+    </div>
+
+    <div class="mn-insights-section">
+        <div class="mn-section-title">
+            <span>Marked regions</span>
+            <span id="mn-marked-total">0</span>
+        </div>
+
+        <div class="mn-region-tabs">
+            <button class="active" data-insight-level="country">Countries</button>
+            <button data-insight-level="state">States</button>
+            <button data-insight-level="district">Districts</button>
+        </div>
+
+        <div id="mn-region-list"></div>
+    </div>
+
+</aside>
+<div id="map"></div>
+
+<div id="map-version"></div>
+
+<div id="searchContainer">
+
+    <input
+        id="search"
+        type="text"
+        placeholder="Search..."
+        autocomplete="off"
+    >
+
+    <div id="results"></div>
+
+</div>
+
+
+
+<div id="info">
+
+    <div id="infoName">
+        World
+    </div>
+
+    <div>
+        Click = color &nbsp; | &nbsp;
+        Shift + click = remove
+    </div>
+
+</div>
+
+
+<!-- Leaflet -->
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+
+
+<!-- Our code -->
+
+
+<script src="js/data-loader.js?v=local" + Date.now() + ""></script>
+
+<script src="js/layers.js?v=1787204164"></script>
+
+<script src="js/controls.js?v=local" + Date.now() + ""></script>
+
+<script src="js/map.js?v=1787204164" + Date.now() + ""></script>
+
+
+<!-- save-export.js disabled: functionality is built into controls.js -->
+<script src="js/version.js?v=999999"></script>
+
+
+<script src="js/version-display.js"></script>\n<script>
+(function () {
+    const welcome = document.getElementById("mapnest-welcome");
+    const start = document.getElementById("mapnest-welcome-start");
+
+    if (!welcome || !start) return;
+
+    start.onclick = function () {
+        welcome.style.opacity = "0";
+        welcome.style.transition = "opacity .25s ease";
+
+        setTimeout(function () {
+            welcome.remove();
+        }, 260);
+    };
+})();
+</script>
+
+<script>
+(function () {
+
+    function byId(id) {
+        return document.getElementById(id);
+    }
+
+    function activate(id) {
+        document.querySelectorAll(".mn-level-btn")
+            .forEach(function (b) {
+                b.classList.remove("active");
+            });
+
+        const el = byId(id);
+        if (el) el.classList.add("active");
+    }
+
+    const home = byId("mn-home");
+    const search = byId("mn-search");
+    const country = byId("mn-country");
+    const state = byId("mn-state");
+    const district = byId("mn-district");
+    const reset = byId("mn-reset");
+    const fullscreen = byId("mn-fullscreen");
+
+    if (home) {
+        home.onclick = function () {
+            if (window.MapApp && MapApp.map)
+                MapApp.map.setView([20, 0], 2);
+        };
+    }
+
+    if (search) {
+        search.onclick = function () {
+            const input = byId("search");
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        };
+    }
+
+    if (country) {
+        country.onclick = async function () {
+            if (window.MapApp) {
+                activate("mn-country");
+                await MapApp.showCountry();
+            }
+        };
+    }
+
+    if (state) {
+        state.onclick = async function () {
+            if (window.MapApp) {
+                activate("mn-state");
+                await MapApp.showStates();
+            }
+        };
+    }
+
+    if (district) {
+        district.onclick = async function () {
+            if (window.MapApp) {
+                activate("mn-district");
+                await MapApp.showDistricts();
+            }
+        };
+    }
+
+    if (fullscreen) {
+        fullscreen.onclick = function () {
+
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+
+        };
+    }
+
+    if (reset) {
+        reset.onclick = function () {
+
+            if (
+                window.MapControls &&
+                typeof MapControls.resetColors === "function"
+            ) {
+                if (confirm("Reset all markings in this project?"))
+                    MapControls.resetColors();
+            }
+
+        };
+    }
+
+    /* Live map telemetry */
+
+    function updateHUD() {
+
+        if (!window.MapApp || !MapApp.map)
+            return;
+
+        const map = MapApp.map;
+        const center = map.getCenter();
+
+        const zoom = byId("mn-zoom-readout");
+        const position = byId("mn-position-readout");
+
+        if (zoom)
+            zoom.textContent =
+                "ZOOM " + map.getZoom().toFixed(1);
+
+        if (position) {
+
+            const lat =
+                Math.abs(center.lat).toFixed(1) +
+                "° " +
+                (center.lat >= 0 ? "N" : "S");
+
+            const lng =
+                Math.abs(center.lng).toFixed(1) +
+                "° " +
+                (center.lng >= 0 ? "E" : "W");
+
+            position.textContent =
+                lat + " · " + lng;
+        }
+    }
+
+    setInterval(updateHUD, 250);
+
+    document.addEventListener(
+        "fullscreenchange",
+        function () {
+            const btn = byId("mn-fullscreen");
+
+            if (btn)
+                btn.classList.toggle(
+                    "active",
+                    !!document.fullscreenElement
+                );
+        }
+    );
+
+})();
+</script>
+
+<script>
+(function () {
+
+    function bind(id, fn) {
+        const el = document.getElementById(id);
+        if (el) el.onclick = fn;
+    }
+
+    bind("mn-home", function () {
+        if (window.MapApp && MapApp.map)
+            MapApp.map.setView([20, 0], 2);
+    });
+
+    bind("mn-country", function () {
+        if (window.MapApp)
+            MapApp.showCountry();
+    });
+
+    bind("mn-state", function () {
+        if (window.MapApp)
+            MapApp.showStates();
+    });
+
+    bind("mn-district", function () {
+        if (window.MapApp)
+            MapApp.showDistricts();
+    });
+
+    bind("mn-project", function () {
+        const selector =
+            document.getElementById("mapnest-project-select");
+
+        if (selector) {
+            selector.focus();
+            selector.click();
+        }
+    });
+
+    bind("mn-reset", function () {
+        if (window.MapControls &&
+            typeof MapControls.resetColors === "function") {
+
+            MapNestModal.confirm(
+                "Reset markings?",
+                "This will remove the saved markings from this workspace.",
+                "Reset"
+            ).then(function(ok) {
+
+                if (ok)
+                    MapControls.resetColors();
+
+            });
+        }
+    });
+
+})();
+</script>
+
+<script>
+(function () {
+
+    function organizeMapNestUI() {
+
+        const center =
+            document.querySelector(".mapnest-command-center");
+
+        const project =
+            document.getElementById("mapnest-project-selector");
+
+        const slot =
+            document.getElementById("mn-project-slot");
+
+        if (center && project && slot && !slot.contains(project)) {
+            slot.appendChild(project);
+            project.style.position = "static";
+            project.style.top = "auto";
+            project.style.right = "auto";
+            project.style.left = "auto";
+            project.style.bottom = "auto";
+            project.style.margin = "0";
+        }
+    }
+
+    setTimeout(organizeMapNestUI, 700);
+    setTimeout(organizeMapNestUI, 1500);
+
+})();
+</script>
+
+<script>
+(function () {
+
+    const welcome =
+        document.getElementById("mapnest-welcome");
+
+    if (!welcome) return;
+
+    /*
+     * MapNest welcome is shown ONLY ONCE:
+     * the first time this browser opens the homepage.
+     *
+     * Reloading homepage:
+     *     no welcome
+     *
+     * Opening another page:
+     *     no welcome
+     *
+     * Returning to homepage:
+     *     no welcome
+     *
+     * Changing workspace:
+     *     no welcome
+     */
+
+    const WELCOME_KEY =
+        "mapnest_home_welcome_seen_v1";
+
+    if (localStorage.getItem(WELCOME_KEY) === "1") {
+        welcome.remove();
+        return;
+    }
+
+    let shown = false;
+    let dismissed = false;
+
+    function showWelcome() {
+
+        if (shown || dismissed) return;
+
+        shown = true;
+
+        /* Mark it immediately so even a reload during
+           the animation will never show it again. */
+        localStorage.setItem(
+            WELCOME_KEY,
+            "1"
+        );
+
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+
+                if (!dismissed)
+                    welcome.classList.add("is-ready");
+
+            });
+        });
+    }
+
+    function mapIsReady() {
+
+        if (!window.MapApp || !MapApp.map)
+            return false;
+
+        if (!MapApp.countryLayer)
+            return false;
+
+        if (
+            typeof MapApp.countryLayer.getLayers !==
+            "function"
+        )
+            return false;
+
+        return (
+            MapApp.countryLayer.getLayers().length > 0
+        );
+    }
+
+    function waitForMap() {
+
+        if (dismissed) return;
+
+        if (mapIsReady()) {
+            showWelcome();
+            return;
+        }
+
+        setTimeout(waitForMap, 100);
+    }
+
+    function dismissWelcome() {
+
+        if (dismissed) return;
+
+        dismissed = true;
+
+        welcome.classList.add("dismissed");
+
+        setTimeout(function () {
+
+            if (welcome.parentNode)
+                welcome.remove();
+
+        }, 10);
+    }
+
+    waitForMap();
+
+    /* Click anywhere on the welcome screen. */
+    welcome.addEventListener(
+        "click",
+        dismissWelcome
+    );
+
+})();
+</script>
+
+<script>
+(function () {
+
+    const panel = document.getElementById("mapnest-insights");
+    const toggle = document.getElementById("mapnest-insights-toggle");
+    const close = document.getElementById("mn-insights-close");
+
+    if (!panel || !toggle) return;
+
+    let activeLevel = "country";
+
+    function layerFor(level) {
+        if (!window.MapApp) return null;
+
+        if (level === "country") return MapApp.countryLayer;
+        if (level === "state") return MapApp.stateLayer;
+        if (level === "district") return MapApp.districtLayer;
+
+        return null;
+    }
+
+    function featureName(item) {
+
+        if (!item || !item.feature)
+            return "Unnamed region";
+
+        const p = item.feature.properties || {};
+
+        return (
+            p.name ||
+            p.NAME ||
+            p.NAME_0 ||
+            p.NAME_1 ||
+            p.NAME_2 ||
+            p.admin ||
+            p.ADMIN ||
+            p.country ||
+            p.state ||
+            p.district ||
+            "Unnamed region"
+        );
+    }
+
+    function stats(level) {
+
+        const layer = layerFor(level);
+
+        if (!layer || typeof layer.getLayers !== "function")
+            return { total: 0, marked: 0, names: [] };
+
+        const layers = layer.getLayers();
+
+        const names = [];
+
+        layers.forEach(function (item) {
+
+            if (item._mapSelected) {
+                names.push(featureName(item));
+            }
+
+        });
+
+        names.sort(function (a, b) {
+            return a.localeCompare(b);
+        });
+
+        return {
+            total: layers.length,
+            marked: names.length,
+            names: names
+        };
+    }
+
+    function percent(marked, total) {
+
+        if (!total) return 0;
+
+        return Math.round(
+            (marked / total) * 1000
+        ) / 10;
+    }
+
+    function update() {
+
+        const c = stats("country");
+        const s = stats("state");
+        const d = stats("district");
+
+        const totalMarked =
+            c.marked + s.marked + d.marked;
+
+        const totalRegions =
+            c.total + s.total + d.total;
+
+        const overall =
+            percent(totalMarked, totalRegions);
+
+        const project =
+            window.MapControls &&
+            typeof MapControls.getActiveProject === "function"
+                ? MapControls.getActiveProject()
+                : "My Map";
+
+        document.getElementById(
+            "mn-insights-project"
+        ).textContent = project;
+
+        document.getElementById(
+            "mn-country-count"
+        ).textContent = c.marked;
+
+        document.getElementById(
+            "mn-state-count"
+        ).textContent = s.marked;
+
+        document.getElementById(
+            "mn-district-count"
+        ).textContent = d.marked;
+
+        document.getElementById(
+            "mn-country-percent"
+        ).textContent =
+            percent(c.marked, c.total) + "%";
+
+        document.getElementById(
+            "mn-state-percent"
+        ).textContent =
+            percent(s.marked, s.total) + "%";
+
+        document.getElementById(
+            "mn-district-percent"
+        ).textContent =
+            percent(d.marked, d.total) + "%";
+
+        document.getElementById(
+            "mn-total-percent"
+        ).textContent =
+            overall + "%";
+
+        document.getElementById(
+            "mn-total-marked"
+        ).textContent =
+            totalMarked + " marked";
+
+        document.getElementById(
+            "mn-total-regions"
+        ).textContent =
+            totalRegions + " regions";
+
+        document.getElementById(
+            "mn-total-progress"
+        ).style.width =
+            Math.min(overall, 100) + "%";
+
+        renderList();
+    }
+
+    function renderList() {
+
+        const result = stats(activeLevel);
+
+        const list =
+            document.getElementById(
+                "mn-region-list"
+            );
+
+        const counter =
+            document.getElementById(
+                "mn-marked-total"
+            );
+
+        counter.textContent = result.marked;
+
+        if (!result.names.length) {
+
+            list.innerHTML = `
+                <div class="mn-empty">
+                    <div class="mn-empty-icon">◌</div>
+                    <strong>Nothing marked yet</strong>
+                    <span>Mark regions on the map and they'll appear here.</span>
+                </div>
+            `;
+
+            return;
+        }
+
+        list.innerHTML = result.names.map(function (name) {
+
+            const code =
+                window.MapNestInsights &&
+                typeof MapNestInsights.countryCodeForName === "function"
+                    ? MapNestInsights.countryCodeForName(name)
+                    : null;
+
+            const flag =
+                code &&
+                typeof MapNestInsights.iso3ToFlag === "function"
+                    ? MapNestInsights.iso3ToFlag(code)
+                    : "";
+
+            return `
+                <div class="mn-region-row">
+                    ${flag ? `<span class="mn-region-flag">${flag}</span>` : '<span class="mn-region-dot"></span>'}
+                    <span>${escapeHtml(name)}</span>
+                </div>
+            `;
+
+        }).join("");
+    }
+
+    function escapeHtml(value) {
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function openInsights() {
+        panel.classList.add("open");
+        panel.setAttribute("aria-hidden", "false");
+        toggle.classList.add("expanded");
+        update();
+    }
+
+    function closeInsights() {
+        panel.classList.remove("open");
+        panel.setAttribute("aria-hidden", "true");
+        toggle.classList.remove("expanded");
+    }
+
+    toggle.addEventListener("click", function () {
+
+        if (panel.classList.contains("open"))
+            closeInsights();
+        else
+            openInsights();
+
+    });
+
+    close.addEventListener("click", function () {
+        closeInsights();
+    });
+
+    /*
+     * Introduce the Insights orb immediately after the
+     * first country layer has actually finished loading.
+     */
+    /*
+     * MAPNEST INSIGHTS — FIRST-LOAD EXPERIENCE
+     *
+     * Automatically open Insights once every 24 hours.
+     * The cooldown survives page reloads and workspace changes.
+     */
+
+    (function revealInsightsOrb() {
+
+        const COOLDOWN =
+            24 * 60 * 60 * 1000;
+
+        const AUTO_OPEN_KEY =
+            "mapnest_insights_auto_opened_at";
+
+        const now =
+            Date.now();
+
+        const lastOpened =
+            Number(
+                localStorage.getItem(
+                    AUTO_OPEN_KEY
+                ) || 0
+            );
+
+        const cooldownActive =
+            lastOpened > 0 &&
+            (now - lastOpened) < COOLDOWN;
+
+
+        /*
+         * Wait until the actual country layer exists.
+         * This means the experience starts after the
+         * map is genuinely ready rather than after an
+         * arbitrary timer.
+         */
+        if (
+            !window.MapApp ||
+            !MapApp.countryLayer ||
+            typeof MapApp.countryLayer.getLayers !== "function" ||
+            !MapApp.countryLayer.getLayers().length
+        ) {
+
+            setTimeout(
+                revealInsightsOrb,
+                80
+            );
+
+            return;
+        }
+
+
+        /*
+         * Orb enters first.
+         */
+        toggle.classList.add(
+            "revealed"
+        );
+
+
+        /*
+         * Only automatically open the panel
+         * when the 24-hour cooldown has expired.
+         */
+        if (!cooldownActive) {
+
+            /*
+             * Give the orb a tiny moment to
+             * complete its entrance animation.
+             */
+            setTimeout(function () {
+
+                /*
+                 * Record the automatic opening
+                 * BEFORE opening the panel.
+                 */
+                localStorage.setItem(
+                    AUTO_OPEN_KEY,
+                    String(Date.now())
+                );
+
+                /*
+                 * Use the existing Insights toggle
+                 * so opening behaves exactly like a
+                 * normal user click.
+                 */
+                if (
+                    !panel.classList.contains("open")
+                ) {
+                    toggle.click();
+                }
+
+            }, 720);
+
+        }
+
+    })();
+
+
+    document.querySelectorAll(
+        "[data-insight-level]"
+    ).forEach(function (button) {
+
+        button.addEventListener("click", function () {
+
+            document.querySelectorAll(
+                "[data-insight-level]"
+            ).forEach(function (b) {
+                b.classList.remove("active");
+            });
+
+            button.classList.add("active");
+
+            activeLevel =
+                button.dataset.insightLevel;
+
+            renderList();
+        });
+    });
+
+    /*
+     * Update automatically whenever the map changes.
+     */
+    const originalHandleClick =
+        window.MapControls &&
+        MapControls.handleClick;
+
+    if (originalHandleClick) {
+
+        MapControls.handleClick = function () {
+
+            const result =
+                originalHandleClick.apply(
+                    this,
+                    arguments
+                );
+
+            setTimeout(update, 20);
+
+            return result;
+        };
+    }
+
+    const ISO3_TO_ISO2 = {
+        ABW:"AW",AFG:"AF",AGO:"AO",AIA:"AI",ALA:"AX",ALB:"AL",
+        AND:"AD",ARE:"AE",ARG:"AR",ARM:"AM",ASM:"AS",ATA:"AQ",
+        ATF:"TF",ATG:"AG",AUS:"AU",AUT:"AT",AZE:"AZ",BDI:"BI",
+        BEL:"BE",BEN:"BJ",BES:"BQ",BFA:"BF",BGD:"BD",BGR:"BG",
+        BHR:"BH",BHS:"BS",BIH:"BA",BLM:"BL",BLR:"BY",BLZ:"BZ",
+        BMU:"BM",BOL:"BO",BRA:"BR",BRB:"BB",BRN:"BN",BTN:"BT",
+        BVT:"BV",BWA:"BW",CAF:"CF",CAN:"CA",CCK:"CC",CHE:"CH",
+        CHL:"CL",CHN:"CN",CIV:"CI",CMR:"CM",COD:"CD",COG:"CG",
+        COK:"CK",COL:"CO",COM:"KM",CPV:"CV",CRI:"CR",CUB:"CU",
+        CUW:"CW",CXR:"CX",CYM:"KY",CYP:"CY",CZE:"CZ",DEU:"DE",
+        DJI:"DJ",DMA:"DM",DNK:"DK",DOM:"DO",DZA:"DZ",ECU:"EC",
+        EGY:"EG",ERI:"ER",ESH:"EH",ESP:"ES",EST:"EE",ETH:"ET",
+        FIN:"FI",FJI:"FJ",FLK:"FK",FRA:"FR",FRO:"FO",FSM:"FM",
+        GAB:"GA",GBR:"GB",GEO:"GE",GGY:"GG",GHA:"GH",GIB:"GI",
+        GIN:"GN",GLP:"GP",GMB:"GM",GNB:"GW",GNQ:"GQ",GRC:"GR",
+        GRD:"GD",GRL:"GL",GTM:"GT",GUF:"GF",GUM:"GU",GUY:"GY",
+        HKG:"HK",HMD:"HM",HND:"HN",HRV:"HR",HTI:"HT",HUN:"HU",
+        IDN:"ID",IMN:"IM",IND:"IN",IOT:"IO",IRL:"IE",IRN:"IR",
+        IRQ:"IQ",ISL:"IS",ISR:"IL",ITA:"IT",JAM:"JM",JEY:"JE",
+        JOR:"JO",JPN:"JP",KAZ:"KZ",KEN:"KE",KGZ:"KG",KHM:"KH",
+        KIR:"KI",KNA:"KN",KOR:"KR",KWT:"KW",LAO:"LA",LBN:"LB",
+        LBR:"LR",LBY:"LY",LCA:"LC",LIE:"LI",LKA:"LK",LSO:"LS",
+        LTU:"LT",LUX:"LU",LVA:"LV",MAC:"MO",MAF:"MF",MAR:"MA",
+        MCO:"MC",MDA:"MD",MDG:"MG",MDV:"MV",MEX:"MX",MHL:"MH",
+        MKD:"MK",MLI:"ML",MLT:"MT",MMR:"MM",MNE:"ME",MNG:"MN",
+        MNP:"MP",MOZ:"MZ",MRT:"MR",MSR:"MS",MTQ:"MQ",MUS:"MU",
+        MWI:"MW",MYS:"MY",MYT:"YT",NAM:"NA",NCL:"NC",NER:"NE",
+        NFK:"NF",NGA:"NG",NIC:"NI",NIU:"NU",NLD:"NL",NOR:"NO",
+        NPL:"NP",NRU:"NR",NZL:"NZ",OMN:"OM",PAK:"PK",PAN:"PA",
+        PCN:"PN",PER:"PE",PHL:"PH",PLW:"PW",PNG:"PG",POL:"PL",
+        PRI:"PR",PRK:"KP",PRT:"PT",PRY:"PY",PSE:"PS",PYF:"PF",
+        QAT:"QA",REU:"RE",ROU:"RO",RUS:"RU",RWA:"RW",SAU:"SA",
+        SDN:"SD",SEN:"SN",SGP:"SG",SGS:"GS",SHN:"SH",SJM:"SJ",
+        SLB:"SB",SLE:"SL",SLV:"SV",SMR:"SM",SOM:"SO",SPM:"PM",
+        SRB:"RS",SSD:"SS",STP:"ST",SUR:"SR",SVK:"SK",SVN:"SI",
+        SWE:"SE",SWZ:"SZ",SXM:"SX",SYC:"SC",SYR:"SY",TCA:"TC",
+        TCD:"TD",TGO:"TG",THA:"TH",TJK:"TJ",TKL:"TK",TKM:"TM",
+        TLS:"TL",TON:"TO",TTO:"TT",TUN:"TN",TUR:"TR",TUV:"TV",
+        TWN:"TW",TZA:"TZ",UGA:"UG",UKR:"UA",UMI:"UM",URY:"UY",
+        USA:"US",UZB:"UZ",VAT:"VA",VCT:"VC",VEN:"VE",VGB:"VG",
+        VIR:"VI",VNM:"VN",VUT:"VU",WLF:"WF",WSM:"WS",YEM:"YE",
+        ZAF:"ZA",ZMB:"ZM",ZWE:"ZW"
+    };
+
+    function iso3ToFlag(code) {
+
+        const iso2 =
+            ISO3_TO_ISO2[String(code).toUpperCase()];
+
+        if (!iso2) return "";
+
+        return iso2
+            .split("")
+            .map(function (c) {
+                return String.fromCodePoint(
+                    127397 + c.charCodeAt(0)
+                );
+            })
+            .join("");
+    }
+
+    function countryCodeForName(name) {
+
+        const layer = layerFor("country");
+
+        if (!layer) return null;
+
+        const target =
+            String(name).toLowerCase();
+
+        for (const item of layer.getLayers()) {
+
+            if (
+                String(featureName(item)).toLowerCase() ===
+                target
+            ) {
+                const props =
+                    item.feature &&
+                    item.feature.properties
+                        ? item.feature.properties
+                        : {};
+
+                return (
+                    props.name ||
+                    props.NAME ||
+                    props.iso_a3 ||
+                    props.ISO_A3 ||
+                    props.ADM0_A3 ||
+                    null
+                );
+            }
+        }
+
+        return null;
+    }
+
+    window.MapNestInsights = {
+        update: update,
+        iso3ToFlag: iso3ToFlag,
+        countryCodeForName: countryCodeForName
+    };
+
+    /*
+     * Keep the panel synchronized with project changes.
+     */
+    setInterval(function () {
+
+        if (panel.classList.contains("open"))
+            update();
+
+    }, 700);
+
+})();
+</script>
+</body>
+</html>
+
+<style>
+.map-level-controls button.active {
+    background: #e9e9e9 !important;
+}
+.map-level-controls button:not(.active):hover {
+    background: #f7f7f7 !important;
+}
+.map-level-controls button.active:hover {
+    background: #e9e9e9 !important;
+}
+</style>
+
+<style>
+#mapnest-welcome {
+    cursor: pointer;
+}
+</style>
+
+<script>
+(function () {
+
+    const welcome =
+        document.getElementById("mapnest-welcome");
+
+    if (!welcome) return;
+
+    function dismissWelcome() {
+        welcome.style.opacity = "0";
+        welcome.style.pointerEvents = "none";
+        welcome.style.transition = "opacity .25s ease";
+
+        setTimeout(function () {
+            if (welcome.parentNode)
+                welcome.remove();
+        }, 260);
+    }
+
+    /* Anything on the welcome screen dismisses it. */
+    welcome.addEventListener("click", dismissWelcome);
+
+})();
+</script>

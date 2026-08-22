@@ -161,7 +161,7 @@ MapApp.clearOldDataCache = function() {
     }
 };
 
-MapApp.clearOldDataCache();
+/* Persistent GeoJSON cache: keep it across page reloads. */
 
 MapApp.dataCache = {};
 MapApp.dataPromises = {};
@@ -884,12 +884,6 @@ MapApp.createLazyLayer = function(
 
         }).addTo(MapApp.map);
 
-    MapApp.setSelectedBoundaryHidden(
-        feature,
-        level,
-        true
-    );
-
     layer.eachLayer(function(child) {
         child._mapSelected = true;
 
@@ -973,18 +967,6 @@ MapApp.enableLazyClicks = function(level) {
                         );
                     }
 
-                    MapApp.setSelectedBoundaryHidden(
-                        feature,
-                        level,
-                        false
-                    );
-
-                    MapApp.setSelectedBoundaryHidden(
-                        feature,
-                        level,
-                        false
-                    );
-
                     MapApp.map.removeLayer(
                         existing.layer
                     );
@@ -1055,69 +1037,24 @@ MapApp.enableLazyClicks = function(level) {
 
 MapApp.lazyLayers = MapApp.lazyLayers || [];
 
-
-
-MapApp.setSelectedBoundaryHidden = function(feature, level, hidden) {
-    const boundaryLayers = MapApp.lazyBoundaryLayers || {};
-    const boundary = boundaryLayers[level];
-
-    if (!boundary) return;
-
-    const selectedKey =
-        MapControls.getFeatureKey(feature, level);
-
-    boundary.eachLayer(function(layer) {
-        if (!layer.feature) return;
-
-        const layerKey =
-            MapControls.getFeatureKey(
-                layer.feature,
-                level
-            );
-
-        if (layerKey !== selectedKey) return;
-
-        if (hidden) {
-            if (!layer._originalSelectedBoundaryStyle) {
-                layer._originalSelectedBoundaryStyle = {
-                    color: layer.options.color,
-                    weight: layer.options.weight,
-                    opacity: layer.options.opacity
-                };
-            }
-
-            layer.setStyle({
-                color: "transparent",
-                weight: 0,
-                opacity: 0
-            });
-        } else if (layer._originalSelectedBoundaryStyle) {
-            layer.setStyle(
-                layer._originalSelectedBoundaryStyle
-            );
-            delete layer._originalSelectedBoundaryStyle;
-        }
-    });
-};
-
 MapApp.addLazyFeature = function(feature, level) {
 
     const styles = {
         country: {
-            color: "transparent",
-            weight: 0,
+            color: "#222",
+            weight: 2,
             fillColor: "#3388ff",
             fillOpacity: 0.65
         },
         state: {
-            color: "transparent",
-            weight: 0,
+            color: "#222",
+            weight: 2,
             fillColor: "#44aa55",
             fillOpacity: 0.65
         },
         district: {
-            color: "transparent",
-            weight: 0,
+            color: "#222",
+            weight: 2,
             fillColor: "#ffaa44",
             fillOpacity: 0.65
         }
@@ -1153,12 +1090,6 @@ MapApp.addLazyFeature = function(feature, level) {
         }
     }).addTo(MapApp.map);
 
-    MapApp.setSelectedBoundaryHidden(
-        feature,
-        level,
-        true
-    );
-
     layer.eachLayer(function(l) {
         l._mapSelected = true;
 
@@ -1182,216 +1113,36 @@ MapApp.showLazyLevel = async function(level) {
 
     MapApp.updateLevelSelection(level);
 
-    MapApp.lazyBoundaryLayers =
-        MapApp.lazyBoundaryLayers || {};
-
     /*
-     * IMPORTANT:
-     *
-     * Clicking the SAME level button again must
-     * NOT destroy the current selections.
-     */
-    if (MapApp.lazyLevel === level) {
-        return;
-    }
-
-    /*
-     * Remove only the currently displayed
-     * colored selection polygons.
-     *
-     * Saved colors remain in localStorage.
+     * Remove only currently displayed selected polygons.
+     * Raw GeoJSON remains cached; no full Leaflet layer is created.
      */
     if (MapApp.lazyLayers) {
-
         MapApp.lazyLayers.forEach(function(item) {
-
             if (
                 item.layer &&
                 MapApp.map.hasLayer(item.layer)
             ) {
                 MapApp.map.removeLayer(item.layer);
             }
-
         });
-
     }
 
     MapApp.lazyLayers = [];
-
+    MapApp.lazyLevel = level;
 
     /*
-     * Boundary hierarchy:
+     * GeoJSON is already cached/preloaded.
+     * Do NOT construct Leaflet polygons here.
      *
-     * Country  → Country
-     * States   → Country + States
-     * District → Country + States + Districts
+     * A polygon is constructed only after the user clicks it.
      */
-    const required = {
-        country: [
-            "country"
-        ],
+    await MapApp.loadAll(level);
 
-        state: [
-            "country",
-            "state"
-        ],
+    MapApp.enableLazyClicks(level);
 
-        district: [
-            "country",
-            "state",
-            "district"
-        ]
-    };
-
-    const keep =
-        required[level];
-
-    try {
-
-        /*
-         * Remove boundary levels that are
-         * no longer required.
-         */
-        [
-            "country",
-            "state",
-            "district"
-        ].forEach(function(name) {
-
-            if (
-                !keep.includes(name) &&
-                MapApp.lazyBoundaryLayers[name]
-            ) {
-
-                if (
-                    MapApp.map.hasLayer(
-                        MapApp.lazyBoundaryLayers[name]
-                    )
-                ) {
-
-                    MapApp.map.removeLayer(
-                        MapApp.lazyBoundaryLayers[name]
-                    );
-
-                }
-
-            }
-
-        });
-
-
-        /*
-         * Create missing boundary layers.
-         */
-        for (const name of keep) {
-
-            await MapApp.createLazyBoundaryLayer(
-                name
-            );
-
-        }
-
-
-        /*
-         * Restore the saved colored regions
-         * for the level we're entering.
-         *
-         * Only saved regions become Leaflet
-         * polygons. Everything else remains
-         * boundary-only.
-         */
-        const data =
-            await MapApp.loadAll(level);
-
-        const saved =
-            MapControls.loadColors();
-
-        for (
-            const feature of
-            (data.features || [])
-        ) {
-
-            const key =
-                MapControls.getFeatureKey(
-                    feature,
-                    level
-                );
-
-            if (!saved[key])
-                continue;
-
-            MapApp.createLazyLayer(
-                feature,
-                level,
-                saved[key]
-            );
-        }
-
-
-        /*
-         * Keep boundary hierarchy visible.
-         */
-        if (
-            MapApp.lazyBoundaryLayers.country &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.country
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.country.bringToFront();
-        }
-
-        if (
-            MapApp.lazyBoundaryLayers.state &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.state
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.state.bringToFront();
-        }
-
-        if (
-            MapApp.lazyBoundaryLayers.district &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.district
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.district.bringToFront();
-        }
-
-
-        /*
-         * Country boundary remains strongest.
-         */
-        if (
-            MapApp.lazyBoundaryLayers.country &&
-            MapApp.map.hasLayer(
-                MapApp.lazyBoundaryLayers.country
-            )
-        ) {
-            MapApp.lazyBoundaryLayers.country.bringToFront();
-        }
-
-
-        MapApp.lazyLevel = level;
-
-        MapApp.enableLazyClicks(
-            level
-        );
-
-    } catch (error) {
-
-        console.error(
-            "LAZY LEVEL LOAD ERROR:",
-            error
-        );
-
-    } finally {
-
-        MapApp.hideLoading();
-
-    }
+    MapApp.hideLoading();
 };
-
 
 /* =========================================================
    END LAZY SYSTEM
