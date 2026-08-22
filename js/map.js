@@ -2199,6 +2199,89 @@ MapApp.initSearch = function() {
 
 MapApp.initSearch();
 
+/* =========================================================
+   SEARCH KEYBOARD NAVIGATION
+   Capture phase prevents Leaflet/map keyboard controls
+   from consuming ArrowUp / ArrowDown.
+   ========================================================= */
+(function () {
+    const search = document.getElementById("search");
+
+    if (!search || search._mapNestArrowFix) return;
+
+    search._mapNestArrowFix = true;
+
+    search.addEventListener("keydown", function(event) {
+
+        if (
+            event.key !== "ArrowUp" &&
+            event.key !== "ArrowDown"
+        ) {
+            return;
+        }
+
+        const box =
+            document.getElementById("results");
+
+        if (!box) return;
+
+        const rows =
+            box.querySelectorAll(".search-result");
+
+        if (!rows.length) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        let index = parseInt(
+            search.dataset.selectedIndex || "-1",
+            10
+        );
+
+        if (event.key === "ArrowDown") {
+            index =
+                index < rows.length - 1
+                    ? index + 1
+                    : 0;
+        } else {
+            index =
+                index > 0
+                    ? index - 1
+                    : rows.length - 1;
+        }
+
+        rows.forEach(function(row, i) {
+
+            const active = i === index;
+
+            row.classList.toggle(
+                "search-result-active",
+                active
+            );
+
+            row.style.background =
+                active
+                    ? "rgba(0,0,0,0.08)"
+                    : "";
+
+            row.style.borderRadius =
+                active
+                    ? "8px"
+                    : "";
+        });
+
+        search.dataset.selectedIndex =
+            String(index);
+
+        rows[index].scrollIntoView({
+            block: "nearest"
+        });
+
+    }, true);
+})();
+
+
 startMap();
 
 
